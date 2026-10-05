@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/NEO-e.App/NEO-e.App.csproj" />
+    <Project Path="src/NEO-e.Application/NEO-e.Application.csproj" />
+    <Project Path="src/NEO-e.Contracts/NEO-e.Contracts.csproj" />
+    <Project Path="src/NEO-e.Domain/NEO-e.Domain.csproj" />
+    <Project Path="src/NEO-e.Infrastructure/NEO-e.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/NEO-e.HomologacaoTests/NEO-e.HomologacaoTests.csproj" />
+    <Project Path="tests/NEO-e.IntegrationTests/NEO-e.IntegrationTests.csproj" />
+    <Project Path="tests/NEO-e.UnitTests/NEO-e.UnitTests.csproj" />
+  </Folder>
+</Solution>
