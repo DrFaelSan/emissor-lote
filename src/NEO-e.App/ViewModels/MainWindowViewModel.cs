@@ -22,6 +22,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
     private readonly LoadCertificateUseCase _loadCertificate;
     private readonly SincronizarCarteiraUseCase _sincronizarCarteira;
     private readonly INsuRepository _nsuRepository;
+    private readonly ICredentialManager _credentialManager;
     private readonly IAppSettingsProvider _settings;
     private readonly IEnvironmentContext _environment;
     private CancellationTokenSource? _discoveryCancellation;
@@ -47,6 +48,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         LoadCertificateUseCase loadCertificate,
         SincronizarCarteiraUseCase sincronizarCarteira,
         INsuRepository nsuRepository,
+        ICredentialManager credentialManager,
         IAppSettingsProvider settings,
         IEnvironmentContext environment)
     {
@@ -54,6 +56,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         _loadCertificate = loadCertificate;
         _sincronizarCarteira = sincronizarCarteira;
         _nsuRepository = nsuRepository;
+        _credentialManager = credentialManager;
         _settings = settings;
         _environment = environment;
         _certificateFolder = settings.Certificates.FolderPath;
@@ -200,7 +203,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
     public void SetPassword(CertificateRowViewModel row, string password)
     {
         row.Password = password;
-        AddLog($"Senha informada para {row.FileName}. Mantida apenas em memoria durante o lote.", LogLevel.Info);
+        
+        // Salvar senha no DPAPI
+        var key = GetCredentialKey(row);
+        _ = _credentialManager.SavePasswordAsync(key, password, CancellationToken.None);
+        
+        AddLog($"Senha informada para {row.FileName}. Salva de forma segura (DPAPI).", LogLevel.Info);
     }
 
     private async Task DiscoverCertificatesAsync()
@@ -216,7 +224,20 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
             var certificates = await _discoverCertificates.ExecuteAsync(CertificateFolder, _discoveryCancellation.Token);
             Certificates.Clear();
             foreach (var certificate in certificates)
-                Certificates.Add(new CertificateRowViewModel(certificate));
+            {
+                var row = new CertificateRowViewModel(certificate);
+                
+                // Tentar carregar senha salva do DPAPI
+                var key = GetCredentialKey(row);
+                var savedPassword = await _credentialManager.GetPasswordAsync(key, _discoveryCancellation.Token);
+                if (!string.IsNullOrEmpty(savedPassword))
+                {
+                    row.Password = savedPassword;
+                    AddLog($"Senha carregada do armazenamento seguro para {row.FileName}.", LogLevel.Info);
+                }
+                
+                Certificates.Add(row);
+            }
             
             // Carregar NSU persistido para cada certificado
             await LoadPersistedNsuAsync(_discoveryCancellation.Token);
@@ -237,6 +258,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         {
             IsBusy = false;
         }
+    }
+
+    private static string GetCredentialKey(CertificateRowViewModel row)
+    {
+        // Usar thumbprint como chave única
+        return $"cert:{row.Thumbprint}";
     }
 
     private async Task LoadPersistedNsuAsync(CancellationToken ct)

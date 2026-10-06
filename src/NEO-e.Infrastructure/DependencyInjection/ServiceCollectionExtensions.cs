@@ -11,6 +11,7 @@ using NEO_e.Infrastructure.Configuration;
 using NEO_e.Infrastructure.FileSystem;
 using NEO_e.Infrastructure.Parsers;
 using NEO_e.Infrastructure.Export;
+using NEO_e.Infrastructure.Security;
 
 namespace NEO_e.Infrastructure.DependencyInjection;
 
@@ -42,6 +43,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IXmlParser, NfseXmlParser>();
         services.AddSingleton<IFileWriter, AtomicXmlFileWriter>();
         services.AddSingleton<IExcelExporter, ClosedXmlExcelExporter>();
+        services.AddSingleton<ICredentialManager, DpapiCredentialManager>();
 
         services.AddSingleton<INsuRepository>(sp =>
         {

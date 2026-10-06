@@ -8,12 +8,14 @@ namespace NEO_e.Infrastructure.Persistence;
 
 public sealed class SqliteNsuRepository : INsuRepository
 {
+    private readonly string _databasePath;
     private readonly string _connectionString;
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private bool _initialized;
 
     public SqliteNsuRepository(string databasePath)
     {
+        _databasePath = databasePath;
         var directory = Path.GetDirectoryName(databasePath);
         if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
             Directory.CreateDirectory(directory);
@@ -38,6 +40,9 @@ public sealed class SqliteNsuRepository : INsuRepository
             await using var connection = new SqliteConnection(_connectionString);
             await connection.OpenAsync(ct);
 
+            // Verificar integridade antes de criar tabelas
+            await CheckIntegrityOrRestoreAsync(connection, ct);
+
             var cmd = connection.CreateCommand();
             cmd.CommandText = """
                 CREATE TABLE IF NOT EXISTS estado_sincronizacao (
@@ -59,6 +64,104 @@ public sealed class SqliteNsuRepository : INsuRepository
         {
             _initLock.Release();
         }
+    }
+
+    private async Task CheckIntegrityOrRestoreAsync(SqliteConnection connection, CancellationToken ct)
+    {
+        var integrityCmd = connection.CreateCommand();
+        integrityCmd.CommandText = "PRAGMA integrity_check";
+        var result = await integrityCmd.ExecuteScalarAsync(ct);
+        
+        if (result is string integrityResult && integrityResult != "ok")
+        {
+            // Integridade falhou - tentar restaurar do backup mais recente
+            await RestoreFromLatestBackupAsync(ct);
+            
+            // Verificar novamente após restauração
+            var retryCmd = connection.CreateCommand();
+            retryCmd.CommandText = "PRAGMA integrity_check";
+            var retryResult = await retryCmd.ExecuteScalarAsync(ct);
+            
+            if (retryResult is string retryIntegrity && retryIntegrity != "ok")
+            {
+                throw new SynchronizationException(
+                    $"Banco de dados corrompido e não foi possível restaurar: {retryIntegrity}",
+                    SyncErrorCode.StateCorrupted,
+                    "SQLite",
+                    0);
+            }
+        }
+    }
+
+    private async Task RestoreFromLatestBackupAsync(CancellationToken ct)
+    {
+        var directory = Path.GetDirectoryName(_databasePath) ?? "";
+        var backupFiles = Directory.GetFiles(directory, "state.db.backup.*")
+            .OrderByDescending(f => f)
+            .ToList();
+
+        foreach (var backupFile in backupFiles)
+        {
+            try
+            {
+                File.Copy(backupFile, _databasePath, overwrite: true);
+                return; // Sucesso na restauração
+            }
+            catch
+            {
+                // Tentar próximo backup
+            }
+        }
+        
+        throw new SynchronizationException(
+            "Banco de dados corrompido e nenhum backup válido encontrado",
+            SyncErrorCode.StateCorrupted,
+            "SQLite",
+            0);
+    }
+
+    public async Task<bool> BackupAsync(CancellationToken ct)
+    {
+        try
+        {
+            var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMdd_HHmmss");
+            var backupPath = $"{_databasePath}.backup.{timestamp}";
+            
+            await using var source = new SqliteConnection(_connectionString);
+            await source.OpenAsync(ct);
+            
+            await using var destination = new SqliteConnection($"Data Source={backupPath}");
+            await destination.OpenAsync(ct);
+            
+            source.BackupDatabase(destination);
+            
+            // Limpar backups antigos (manter últimos 10)
+            CleanOldBackups();
+            
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private void CleanOldBackups(int keepCount = 10)
+    {
+        try
+        {
+            var directory = Path.GetDirectoryName(_databasePath) ?? "";
+            var backupFiles = Directory.GetFiles(directory, "state.db.backup.*")
+                .OrderByDescending(f => f)
+                .Skip(keepCount)
+                .ToList();
+
+            foreach (var file in backupFiles)
+            {
+                try { File.Delete(file); } catch { }
+            }
+        }
+        catch { }
     }
 
     public async Task<EstadoSincronizacao?> GetAsync(Cnpj cnpj, CancellationToken ct)

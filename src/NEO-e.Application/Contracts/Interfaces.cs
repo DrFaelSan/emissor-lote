@@ -45,6 +45,15 @@ public enum CertificateValidationError
     InvalidFormat
 }
 
+// Credential Management (DPAPI)
+public interface ICredentialManager
+{
+    Task<bool> SavePasswordAsync(string key, string password, CancellationToken ct);
+    Task<string?> GetPasswordAsync(string key, CancellationToken ct);
+    Task<bool> DeletePasswordAsync(string key, CancellationToken ct);
+    Task<bool> ExistsAsync(string key, CancellationToken ct);
+}
+
 public interface INsuRepository
 {
     Task<EstadoSincronizacao?> GetAsync(Cnpj cnpj, CancellationToken ct);
