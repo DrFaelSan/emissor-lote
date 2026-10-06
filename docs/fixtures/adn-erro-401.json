@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "401",
+    "message": "Certificado digital inválido ou não apresentado",
+    "details": "Autenticação mTLS falhou: certificado expirado, revogado ou não confiável"
+  }
+}

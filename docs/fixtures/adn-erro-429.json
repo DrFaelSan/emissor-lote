@@ -1,0 +1,8 @@
+{
+  "error": {
+    "code": "429",
+    "message": "Rate limit excedido: muitas requisições em curto período",
+    "details": "Aguarde antes de realizar nova consulta",
+    "retryAfter": 60
+  }
+}

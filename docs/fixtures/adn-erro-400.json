@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "400",
+    "message": "NSU inválido: deve ser um número inteiro positivo",
+    "details": "Parâmetro 'NSU' na URL deve ser numérico"
+  }
+}

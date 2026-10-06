@@ -137,3 +137,6 @@ Os comandos definitivos de build, teste, formatacao e publicacao devem ser adici
 - Identificadores de task usam prefixo do epico, por exemplo `SYNC-003` ou `002-MAN-005`.
 - Decisoes que alteram contrato devem gerar documento em `docs/decisions/`.
 - Evidencias de homologacao devem ser sanitizadas antes de entrar no repositorio.
+
+
+dotnet publish src/NEO-e.App/NEO-e.App.csproj -c Release -r win-x64 --self-contained true

@@ -17,6 +17,8 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddSingleton<IConfiguration>(configuration);
+
         services.AddOptions<AppSettings>().BindConfiguration(AppSettings.SectionName);
         services.AddOptions<CertificateSettings>().BindConfiguration(CertificateSettings.SectionName);
         services.AddOptions<StorageSettings>().BindConfiguration(StorageSettings.SectionName);
@@ -51,6 +53,20 @@ public static class ServiceCollectionExtensions
             return new SqliteDocumentRepository(dbPath);
         });
 
+        services.AddSingleton<IGapAnalyzer>(sp =>
+        {
+            var settings = sp.GetRequiredService<IOptions<AppSettings>>().Value;
+            var dbPath = Path.Combine(settings.Storage.DestinationPath, ".neo-e", "state.db");
+            return new SqliteGapAnalyzer(dbPath);
+        });
+
+        services.AddSingleton<IReceivedDocumentRepository>(sp =>
+        {
+            var settings = sp.GetRequiredService<IOptions<AppSettings>>().Value;
+            var dbPath = Path.Combine(settings.Storage.DestinationPath, ".neo-e", "state.db");
+            return new SqliteReceivedDocumentRepository(dbPath);
+        });
+
         services.AddSingleton<IAdnClient, AdnHttpClient>();
 
         return services;
@@ -58,12 +74,12 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddSerilog(this IServiceCollection services, IConfiguration configuration)
     {
-        var logSettings = configuration.GetSection(LoggingSettings.SectionName).Get<LoggingSettings>() ?? new LoggingSettings();
-        
-        services.AddSingleton<Serilog.ILogger>(_ =>
+        services.AddSingleton<Serilog.ILogger>(sp =>
         {
-            var logFilePath = string.IsNullOrWhiteSpace(logSettings.LogFilePath) 
-                ? Path.Combine(AppContext.BaseDirectory, "logs", "app.log") 
+            var logSettings = sp.GetRequiredService<IOptions<LoggingSettings>>().Value;
+
+            var logFilePath = string.IsNullOrWhiteSpace(logSettings.LogFilePath)
+                ? Path.Combine(AppContext.BaseDirectory, "logs", "app.log")
                 : logSettings.LogFilePath;
 
             var logDirectory = Path.GetDirectoryName(logFilePath);

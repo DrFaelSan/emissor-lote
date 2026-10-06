@@ -1,0 +1,27 @@
+{
+  "ultNSU": 4760,
+  "maxNSU": 8920,
+  "lote": [
+    {
+      "NSU": 4711,
+      "chaveAcesso": "35260112345678000199550010000000011000000001",
+      "tipoDocumento": "NFS-e",
+      "dataHora": "2026-01-15T09:32:11-03:00",
+      "XML": "H4sIAAAAAAAAA+1da3PbthL9K1VNr6zLx5X6f8rJzMzMjAwNDM1M/OT0/Ny8xNzC3JzUvLzClJL9fJyCxWslIqLU4t8vHx8TAwMDAyMjIwMDQ0NjU2ODhAAAA="
+    },
+    {
+      "NSU": 4712,
+      "chaveAcesso": "35260112345678000199550010000000021000000002",
+      "tipoDocumento": "NFS-e",
+      "dataHora": "2026-01-15T10:15:33-03:00",
+      "XML": "H4sIAAAAAAAAA+1da3PbthL9K1VNr6zLx5X6f8rJzMzMjAwNDM1M/OT0/Ny8xNzC3JzUvLzClJL9fJyCxWslIqLU4t8vHx8TAwMDAyMjIwMDQ0NjU2ODhAAAA="
+    },
+    {
+      "NSU": 4713,
+      "chaveAcesso": "35260112345678000199550010000000031000000003",
+      "tipoDocumento": "Evento",
+      "dataHora": "2026-01-15T11:00:00-03:00",
+      "XML": "H4sIAAAAAAAAA+1da3PbthL9K1VNr6zLx5X6f8rJzMzMjAwNDM1M/OT0/Ny8xNzC3JzUvLzClJL9fJyCxWslIqLU4t8vHx8TAwMDAyMjIwMDQ0NjU2ODhAAAA="
+    }
+  ]
+}

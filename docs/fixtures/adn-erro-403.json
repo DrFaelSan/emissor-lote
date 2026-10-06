@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "403",
+    "message": "Acesso negado: certificado não autorizado para o CNPJ consultado",
+    "details": "O certificado apresentado não possui vínculo com o CNPJ raiz da consulta"
+  }
+}

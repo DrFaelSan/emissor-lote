@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "500",
+    "message": "Payload inválido: resposta não é JSON válido",
+    "details": "O servidor retornou conteúdo que não pode ser deserializado como JSON"
+  }
+}

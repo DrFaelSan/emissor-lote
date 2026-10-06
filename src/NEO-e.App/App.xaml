@@ -1,24 +1,41 @@
 ﻿<Application x:Class="NEO_e.App.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:NEO_e.App">
+             xmlns:local="clr-namespace:NEO_e.App.Converters">
     <Application.Resources>
-        <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#F4F1EA" />
-        <SolidColorBrush x:Key="PanelBackgroundBrush" Color="#FFFCF7" />
-        <SolidColorBrush x:Key="InkBrush" Color="#202522" />
-        <SolidColorBrush x:Key="MutedInkBrush" Color="#66706B" />
-        <SolidColorBrush x:Key="AccentBrush" Color="#0E6B5A" />
-        <SolidColorBrush x:Key="AccentLightBrush" Color="#D7EAE2" />
-        <SolidColorBrush x:Key="WarningBrush" Color="#9A5A16" />
-        <Style TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
-        </Style>
+        <!-- Cores e Temas Globais (UI-001) -->
+        <SolidColorBrush x:Key="BackgroundBrush" Color="#F5F5F0" />
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#D4AF37" />
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#333333" />
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#777777" />
+        <SolidColorBrush x:Key="LogInfoBrush" Color="#333333" />
+        <SolidColorBrush x:Key="LogWarningBrush" Color="#B8860B" />
+        <SolidColorBrush x:Key="LogErrorBrush" Color="#CC0000" />
+        <SolidColorBrush x:Key="LogSuccessBrush" Color="#2E7D32" />
+
+        <!-- Estilos padronizados de controles para manter UI consistente -->
         <Style TargetType="Button">
-            <Setter Property="Padding" Value="14,8" />
-            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="Padding" Value="15,8" />
+            <Setter Property="Margin" Value="5" />
+            <Setter Property="Background" Value="{StaticResource PrimaryBrush}" />
             <Setter Property="Foreground" Value="White" />
-            <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+            <Setter Property="FontWeight" Value="Bold" />
             <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
         </Style>
+
+        <Style TargetType="TextBox">
+            <Setter Property="Padding" Value="5" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        </Style>
+
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        </Style>
+        
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <local:LogLevelToBrushConverter x:Key="LogLevelToBrushConverter"/>
     </Application.Resources>
 </Application>

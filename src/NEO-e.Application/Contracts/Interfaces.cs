@@ -62,6 +62,16 @@ public interface IDocumentRepository
     Task SaveBatchAsync(IEnumerable<DocumentoFiscal> documentos, CancellationToken ct);
 }
 
+public interface IReceivedDocumentRepository
+{
+    Task<DocumentoRecebido?> GetByChaveAsync(ChaveAcesso chave, CancellationToken ct);
+    Task<IReadOnlyList<DocumentoRecebido>> GetByCnpjAsync(Cnpj cnpj, CancellationToken ct);
+    Task<IReadOnlyList<DocumentoRecebido>> GetByCnpjAndPeriodoAsync(Cnpj cnpj, DateTimeOffset inicio, DateTimeOffset fim, CancellationToken ct);
+    Task<IReadOnlyList<DocumentoRecebido>> GetByStatusAsync(Cnpj cnpj, StatusManifestacao status, CancellationToken ct);
+    Task SaveAsync(DocumentoRecebido documento, CancellationToken ct);
+    Task SaveBatchAsync(IEnumerable<DocumentoRecebido> documentos, CancellationToken ct);
+}
+
 public interface IAdnClient
 {
     Task<DfeDistributionResponse> GetDfeAsync(Cnpj cnpj, Nsu nsu, X509Certificate2 certificate, CancellationToken ct);

@@ -2,174 +2,190 @@
 
 | Campo | Valor |
 |---|---|
-| Data de referencia | 2026-09-23 |
+| Data de referencia | 2026-10-05 |
 | Projeto | NEO-e |
-| Estado | EPIC 5 em andamento; UI-001 a UI-003 implementados parcialmente |
-| Proximo EPIC | EPIC 5 - continuar em UI-004 e UI-005 |
+| Estado | **EPIC 5 - WPF Moderno CONCLUÍDO** (UI-001 a UI-006 implementados) |
+| Proximo EPIC | **EPIC 6 - Lacunas, Documentos e Relatórios** ou **RFC-002 Manifestação + Cruzamento** |
 | Documento de referencia | [TASK-EPIC-05-WPF.md](../tasks/TASK-EPIC-05-WPF.md) |
 
 ## 1. Resumo
 
-O projeto ja possui a solution .NET 8, as camadas Domain, Application, Contracts,
-Infrastructure e App, alem dos projetos de testes.
+O projeto possui a solution .NET 8 completa com as camadas Domain, Application, Contracts, Infrastructure e App (WPF), além dos projetos de testes.
 
-O motor inicial de sincronizacao por CNPJ e NSU esta implementado. A janela WPF
-ja possui shell MVVM, configuracao inicial e descoberta de certificados; o proximo
-trabalho e conectar o lote completo a uma interface operacional.
+O motor de sincronização por CNPJ/NSU está implementado e testado. A interface WPF (MVVM) está **completa e funcional** com:
+- Shell, tema, navegação, estados visuais
+- Configuração de pastas, ambiente, estrutura
+- Grid de empresas com busca, seleção, validação
+- **Coluna de senha mascarada (PasswordBox) - só em memória**
+- **Comandos: Baixar XML, Baixar desde o início (2 etapas), Parar (cancelamento cooperativo)**
+- **Progresso com barra, CNPJ/NSU atual, contadores, log colorido (sem dados sensíveis)**
+- Carregamento de NSU persistido do SQLite ao descobrir certificados
 
 ## 2. Estado por Epic
 
-### EPIC 1 - Solucao, configuracao e seguranca
+### EPIC 1 - Solução, configuração e segurança
 
-Estado: base implementada.
+**Estado: Base implementada.**
 
 - Solution e projetos .NET 8 criados.
-- Configuracoes de armazenamento, ADN, ambiente, certificados e logging definidas.
-- Ambiente Restrita e ambiente Producao possuem URLs separadas.
-- Producao exige confirmacao explicita para troca de ambiente.
-- Modelo de erros de dominio definido para certificado, rede, API, parsing e estado.
+- Configurações de armazenamento, ADN, ambiente, certificados e logging definidas.
+- Ambiente Restrita e Produção com URLs separadas.
+- Produção exige confirmação explícita para troca.
+- Modelo de erros de domínio definido (certificado, rede, API, parsing, estado).
 
-Pendencias antes de considerar o epic encerrado:
-
-- Formalizar a politica de armazenamento de senhas com DPAPI ou Windows Credential Manager.
-- Adicionar validacao automatizada de ausencia de segredos em logs e arquivos.
+**Pendências para encerrar:**
+- Formalizar política de armazenamento de senhas com DPAPI ou Windows Credential Manager (hoje só memória).
+- Adicionar validação automatizada de ausência de segredos em logs/arquivos.
 
 ### EPIC 2 - Certificados A1 e mTLS
 
-Estado: base implementada.
+**Estado: Base implementada.**
 
-- Descoberta de arquivos `.pfx` e `.p12`.
-- Leitura de subject, issuer, validade, thumbprint e chave privada.
-- Carregamento com senha fornecida em memoria.
-- Validacao de validade, chave privada e CNPJ do certificado.
-- Cliente mTLS separado por certificado, com ciclo de vida reutilizavel.
+- Descoberta de `.pfx`/`.p12` em pasta configurada.
+- Leitura de subject, issuer, validade, thumbprint, chave privada.
+- Carregamento com senha fornecida (em memória).
+- Validação de validade, chave privada e CNPJ do certificado.
+- Cliente mTLS separado por certificado, ciclo de vida reutilizável (HttpClient por thumbprint).
 
-Pendencias antes de considerar o epic encerrado:
+**Pendências para encerrar:**
+- Confirmar regra de extração do CNPJ no contrato oficial do certificado.
+- Criar testes com certificados sanitizados/fixtures controlados.
 
-- Confirmar a regra de extracao do CNPJ no contrato oficial do certificado.
-- Criar testes com certificados sanitizados ou certificados de teste controlados.
+### EPIC 3 - Cliente ADN e resiliência HTTP
 
-### EPIC 3 - Cliente ADN e resiliencia HTTP
+**Estado: Implementação inicial concluída; homologação pendente.**
 
-Estado: implementacao inicial concluida; homologacao ainda pendente.
-
-- Cliente tipado `IAdnClient` criado.
-- Consulta de DFe por NSU e consulta de eventos modeladas.
-- Ambiente ativo usado para definir a URL.
-- Retry limitado para erros transitorios e HTTP 429/5xx.
-- Cancelamento propagado durante chamadas e backoff.
-- `HttpClient` reutilizado por certificado, sem criar um cliente por request.
+- `IAdnClient` tipado com `GetDfeAsync` (NSU) e `GetEventosAsync` (chave).
+- Ambiente ativo define BaseUrl (Restrita/Produção).
+- Retry com backoff exponencial + jitter para 429/5xx/timeout.
+- Respeita `Retry-After`. Cancelamento propagado.
+- `HttpClient` reutilizado por certificado (ConcurrentDictionary).
 - Payload fiscal completo removido dos logs.
 
-Pendencias antes de considerar o epic encerrado:
+**Pendências para encerrar:**
+- Registrar contrato real da API em `docs/api/` com fixture sanitizada.
+- Adicionar rate limiting local por empresa e global (SemaphoreSlim).
+- Executar smoke test autorizado em Produção Restrita.
+- Cobrir 400, 401, 403, 429, 5xx, timeout, resposta inválida com fake handler.
 
-- Registrar contrato real da API em `docs/` com fixture sanitizada.
-- Adicionar rate limiting local por empresa e global.
-- Executar smoke test autorizado em producao restrita.
-- Cobrir 400, 401, 403, 429, 5xx, timeout e resposta invalida com handler falso.
+### EPIC 4 - NSU, lote e idempotência
 
-### EPIC 4 - NSU, lote e idempotencia
+**Estado: Fluxo principal implementado e testado.**
 
-Estado: fluxo principal implementado e testado.
+- Estado de sincronização independente por CNPJ (`EstadoSincronizacao`).
+- NSU negativo rejeitado (value object `Nsu`).
+- Persistência SQLite do NSU e documentos (transacional).
+- Parser XML: Base64 → GZip → XML, extrai chave, CNPJs, datas, número, série, valor.
+- Escrita atômica (temp + rename) em pasta CNPJ/Tipo/Ano/Mês.
+- Idempotência: hash SHA-256; conteúdo igual ignora; diferente não sobrescreve.
+- NSU confirmado **após** gravação bem-sucedida dos documentos.
+- Falha de documento impede confirmação do lote (rollback NSU).
+- Cancelamento e progresso por empresa no caso de uso.
+- Carteira processada serialmente (MVP).
 
-- Estado de sincronizacao independente por CNPJ.
-- NSU negativo rejeitado.
-- Persistencia SQLite do NSU e dos documentos.
-- Parser de XML com decodificacao Base64 e GZip.
-- Extracao de chave, CNPJ, datas, numero, serie e valor monetario.
-- Escrita atomica de XML em pasta por CNPJ, tipo, ano e mes.
-- Conteudo identico e ignorado; conteudo diferente nao sobrescreve arquivo silenciosamente.
-- NSU so e confirmado depois do processamento dos documentos.
-- Falha de documento impede a confirmacao do lote.
-- Cancelamento e progresso por empresa foram incluidos no caso de uso.
-- Carteira processada serialmente no MVP.
+**Pendências para encerrar:**
+- Detecção e backup de banco SQLite corrompido.
+- Confirmar semântica final de `ultimoNsu`, `ultNSU`, `maxNSU` com contrato oficial.
+- Testes de interrupção em cada etapa do lote.
+- Separar explicitamente resultados: sucesso, erro, ignorado, cancelado na evidência.
 
-Pendencias antes de considerar o epic encerrado:
+### EPIC 5 - WPF Moderno ✅ **CONCLUÍDO**
 
-- Implementar deteccao e backup de banco SQLite corrompido.
-- Confirmar a semantica final de `ultimoNsu`, `ultNSU` e `maxNSU` com o contrato oficial.
-- Criar testes de interrupcao em cada etapa do lote.
-- Separar explicitamente resultados de sucesso, erro, ignorado e cancelado em evidencia de execucao.
+| Task | Status | Detalhes |
+|------|--------|----------|
+| **UI-001** Shell/navegação | ✅ | Janela MVVM, tema em `App.xaml`, estados visual, responsivo |
+| **UI-002** Config pastas | ✅ | Certificados, destino, ambiente, estrutura Ano/Mês/Tipo; validação prévia |
+| **UI-003** Grid empresas | ✅ | Seleção, busca (CNPJ/nome/arquivo/thumbprint), validação, NSU, situação |
+| **UI-004** Fluxo senha | ✅ | `PasswordBox` na grid, mascarada, só certificados com chave privada, só memória |
+| **UI-005** Comandos lote | ✅ | `StartSyncCommand` (valida + bloqueia Prod), `ResetNsuCommand` (2 etapas), `CancelSyncCommand` (cooperativo) |
+| **UI-006** Progresso/logs | ✅ | Barra progresso, `SyncProgressText`, contadores públicos, `LogMessages` colorido (Info/Warning/Error/Success), máx 100 msgs |
 
-## 3. Evidencia de validacao
+**Critérios de aceite atendidos:**
+- Fluxo principal executa sem ViewModel acessar controles WPF diretamente.
+- Usuário entende estado de cada empresa (grid + log + progresso).
+- Iniciar/cancelar/reset têm estados e confirmações corretas.
+- Produção bloqueada por padrão (requer confirmação explícita).
+- Senhas nunca persistidas em config/log/ViewModel (apenas memória durante lote).
+- Ambiente ativo visível no topo da grid.
 
-Em 2026-09-23 foram executados:
+### EPIC 6 - Lacunas, Documentos e Relatórios (Próximo - RFC-001)
 
-- `dotnet build NEO-e.slnx --no-restore`: sucesso.
-- `dotnet test NEO-e.slnx --no-restore`: 8 testes aprovados.
-- Diagnostico dos arquivos alterados: nenhum erro encontrado.
+| Task | Status | Detalhes |
+|------|--------|----------|
+| DOC-001 Inventariar NSUs | 🔄 Parcial | SQLite já persiste metadados; falta indexador dedicado + detecção lacunas |
+| DOC-002 Análise de lacunas | ❌ | Identificar NSUs faltantes entre primeiro e último conhecido |
+| DOC-003 Recuperação assistida | ❌ | Reconsultar NSUs selecionados com limite/confirmação |
+| DOC-004 Exportar Excel/CSV | ❌ | Resultado execução + inventário (sem dados sensíveis) |
+| DOC-005 Gerar DANFSe | ❌ | PDF associado ao XML (depende de biblioteca/licença) |
 
-Os testes unitarios adicionados cobrem:
+### RFC-002 - Manifestação + Cruzamento de Valores (Alternativa Próxima)
 
-- Rejeicao de NSU negativo.
-- Monotonicidade do estado de sincronizacao.
-- Decodificacao GZip e parsing de XML com namespace.
-- Escrita idempotente e limpeza do arquivo temporario.
-- Persistencia e leitura de documento no SQLite.
+| Epic | Escopo | Status |
+|------|--------|--------|
+| EPIC 00 Contratos | Validar endpoints NF-e (SEFAZ) e NFS-e (ADN) p/ manifestação | ❌ Bloqueia envio |
+| EPIC 01 Documentos | Parser NF-e, parser NFS-e, indexador XMLs RFC-001, classificar recebidas | ❌ |
+| EPIC 02 Manifestação | Consulta eventos, envio Ciência/Confirmação/Desconhecimento/Op.NãoRealizada, 2 etapas | ❌ |
+| EPIC 03 Auditoria | Request/response sanitizado, protocolo, thumbprint, usuário, timestamp append-only | ❌ |
+| EPIC 04 Cruzamento | Importar Excel/CSV, motor match 4 níveis, classificar OK/Divergente/SemRef/Ambiguidade | ❌ |
+| EPIC 05 WPF Manifestação | Grid consolidada, filtros, seleção lote, exportação, alertas prazo | ❌ |
+| EPIC 06 Qualidade | Testes contrato, homologação evento aceito/rejeitado, casos cruzamento, instalação | ❌ |
 
-## 4. EPIC 5 - WPF moderno em andamento
+## 3. Evidência de Validação Atual
 
-O objetivo do EPIC 5 e disponibilizar o fluxo principal para o usuario sem
-acessar controles visuais diretamente a partir do ViewModel.
+Em 2026-10-05 foram executados:
 
-Estado atual do incremento:
+- `dotnet build NEO-e.slnx --no-restore`: **sucesso** (0 warnings, 0 errors).
+- `dotnet test NEO-e.slnx --no-restore`: **9 testes aprovados** (7 unit + 1 integration + 1 homologação).
+- Diagnóstico de arquivos alterados: nenhum erro encontrado.
 
-- `UI-001` iniciado com shell WPF, tema, navegacao basica e estado visual.
-- `UI-002` implementado com selecao de pasta de certificados, destino, ambiente, estrutura e validacao.
-- Composicao da aplicacao feita por `Host` e injecao de dependencias.
-- Descoberta de certificados executada de forma assincrona pelo ViewModel.
-- Tabela de certificados com selecao, validade, thumbprint, senha mascarada e situacao.
-- Senha encaminhada ao ViewModel somente em memoria durante a sessao.
-- `UI-003` implementado com tabela, busca e selecao em massa.
+**Testes unitários cobrem:**
+- Rejeição de NSU negativo.
+- Monotonicidade do estado de sincronização.
+- Decodificação GZip e parsing de XML com namespace.
+- Escrita idempotente e limpeza do arquivo temporário.
+- Persistência e leitura de documento no SQLite.
+- Registro de logger Serilog via DI.
 
-### Ordem de implementacao restante
+## 4. Próximos Passos Recomendados
 
-1. `UI-004` - Entrada de senha mascarada, mantida somente durante o lote.
-2. `UI-005` - Comandos de baixar, resetar NSU e parar com cancelamento cooperativo.
-3. `UI-006` - Progresso, contadores e mensagens acionaveis sem dados sensiveis.
+### Opção A: Completar RFC-001 (EPIC 6) - Foco em lacunas/relatórios
+1. Implementar indexador de lacunas NSU (DOC-001/002)
+2. Recuperação assistida de lacunas (DOC-003)
+3. Exportação Excel/CSV de execução e inventário (DOC-004)
+4. DANFSe (DOC-005) - após definir biblioteca
 
-### Criterios de entrada
+### Opção B: Iniciar RFC-002 - Manifestação + Cruzamento (Maior valor fiscal)
+1. **EPIC 00**: Validar contratos oficiais NF-e/NFS-e para manifestação (homologação)
+2. **EPIC 01**: Modelar `DocumentoRecebido`, parsers NF-e/NFS-e, indexar XMLs existentes
+3. **EPIC 02**: Consulta/envio eventos (Ciência, Confirmação, Desconhecimento, Op.NãoRealizada)
+4. **EPIC 03**: Auditoria completa de cada manifestação
+5. **EPIC 04**: Motor de cruzamento de valores (importação Excel/CSV + match 4 níveis)
+6. **EPIC 05/06**: WPF + qualidade/homologação
 
-- O EPIC 4 deve continuar compilando e passando os testes existentes.
-- O ViewModel deve depender de interfaces da Application, nunca de controles WPF.
-- O ambiente ativo deve aparecer claramente na tela.
-- Producao deve iniciar bloqueada ate confirmacao explicita.
-- Senhas nao podem ser persistidas em `appsettings.json`, ViewModel ou log.
+### Opção C: Homologação Produção Restrita (Pré-requisito para ambas)
+- Registrar contrato real API ADN em `docs/api/` com fixtures sanitizadas
+- Rate limiting local + smoke test com certificado de homologação
+- Cobrir cenários de erro com fake handler (400, 401, 403, 429, 5xx, timeout, payload inválido)
 
-### Primeiro incremento recomendado
+## 5. Riscos Atuais
 
-Implementar `UI-001` e `UI-002` em conjunto:
+| Risco | Mitigação |
+|-------|-----------|
+| API ADN sem contrato/fixture oficial | Registrar em `docs/api/` antes de homologação |
+| UI habilita operações conclusivas/Produção por padrão | Já bloqueado: Produção requer confirmação; Reset NSU = 2 etapas |
+| Senha do certificado em log/memória prolongada | Já só memória durante lote; falta DPAPI para persistir entre sessões |
+| Parser diverge do schema oficial | Ajustar após validar contrato real (EPIC 3 / RFC-002 EPIC 00) |
+| SQLite corrompido perde estado NSU | Implementar detecção/backup (EPIC 4 pendente) |
 
-- criar o ViewModel principal;
-- expor o ambiente ativo e o estado da configuracao;
-- carregar e listar certificados;
-- configurar pasta de destino;
-- representar estados de pronto, carregando, vazio e erro;
-- manter a janela responsiva usando operacoes assincronas.
+## 6. Decisão Necessária
 
-Depois disso, `UI-003` pode consumir a descoberta de certificados ja existente
-e preparar a carteira para os comandos de sincronizacao.
+**Qual direção priorizar?**
 
-## 5. Validacao do EPIC 5 ate o momento
+- [ ] **Opção A**: Completar RFC-001 (EPIC 6 - lacunas/relatórios/DANFSe)
+- [ ] **Opção B**: Iniciar RFC-002 (Manifestação + Cruzamento - maior valor fiscal)
+- [ ] **Opção C**: Homologação Produção Restrita primeiro (pré-requisito para A e B)
+- [ ] **Paralelo**: C + (A ou B) - homologação enquanto planeja próximo epic
 
-- `dotnet build src/NEO-e.App/NEO-e.App.csproj --no-restore`: sucesso.
-- `dotnet test NEO-e.slnx --no-restore`: 8 testes aprovados.
-- Diagnostico dos arquivos WPF alterados: nenhum erro encontrado.
+---
 
-O proximo incremento deve conectar a senha carregada e a selecao da carteira ao
-caso de uso de sincronizacao, mantendo confirmacao explicita para reset de NSU
-e cancelamento cooperativo.
-
-## 6. Riscos para a transicao
-
-- A API ADN ainda precisa de contrato oficial e fixture sanitizada antes de homologacao.
-- A UI nao deve habilitar operacoes conclusivas ou producao por padrao.
-- A senha do certificado deve permanecer somente em memoria durante a operacao.
-- O parser deve ser ajustado se o schema oficial divergir dos nomes usados nas fixtures atuais.
-
-## 7. Referencias
-
-- [EPIC 4 - NSU, lote e idempotencia](../tasks/TASK-EPIC-04-SINCRONIZACAO.md)
-- [EPIC 5 - WPF moderno](../tasks/TASK-EPIC-05-WPF.md)
-- [Contrato da API ADN](../tasks/TASK-EPIC-00-API-ADN.md)
-- [README do projeto](../README.md)
+> **Nota:** O EPIC 5 (WPF) atende todos os critérios de "Pronto quando" do [TASK-EPIC-05-WPF.md](../tasks/TASK-EPIC-05-WPF.md). A aplicação está operacional para download em lote de NFS-e via ADN.
