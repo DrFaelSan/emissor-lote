@@ -1,0 +1,326 @@
+Download em massa de notas fiscais de serviço
+
+Desenvolvi um aplicativo para baixar em lote os XMLs de NFS-e, emitidas, recebidas e eventos, pela API pública nacional, utilizando os certificados digitais A1 das empresas atendidas.
+
+Desenvolvido com Claude Code, em WinForms / .NET 8.
+
+O problema
+O processo anterior utilizava uma extensão de navegador. Ela atendia uma empresa por vez e, como o navegador apresentava um certificado por sessão, trocar de empresa exigia fechar e reabrir o navegador.
+Para uma carteira com dezenas de empresas, o processo não escalava.
+
+O que construí
+Um aplicativo desktop capaz de percorrer toda a carteira em uma única execução.
+Para cada empresa, o aplicativo utiliza seu respectivo certificado digital A1 para acessar a API, permitindo processar várias empresas sem precisar trocar manualmente o certificado ou reiniciar o navegador.
+A comunicação com a API utiliza autenticação por certificado digital (mTLS).
+
+Como funciona
+A sincronização utiliza o NSU como cursor sequencial, persistido individualmente para cada empresa.
+
+Assim, cada execução:
+→ retoma de onde a anterior parou
+→ consulta os documentos disponíveis
+→ pagina até o fim da caixa
+→ descompacta os XMLs
+→ organiza os arquivos na estrutura de pastas já utilizada pela equipe fiscal
+
+Dessa forma, os lotes antigos e os novos continuam convivendo na mesma árvore de diretórios, sem precisar alterar o processo que a equipe já utilizava.
+O objetivo não foi apenas automatizar o download, mas eliminar uma limitação operacional que aparecia justamente quando o volume de empresas aumentava.
+
+--- publi 2
+
+🚀 De um estudo simples a um projeto completo de automação de DF-e
+Há algum tempo publiquei aqui uma primeira versão de um projeto pessoal que comecei como estudo sobre automação e distribuição de Documentos Fiscais Eletrônicos.
+Apaguei aquela publicação porque o projeto evoluiu tanto que aquela versão já não representava mais o que ele havia se tornado.
+O que começou como um estudo de captura de NF-e pela SEFAZ cresceu para uma solução modular com suporte a NF-e, NFC-e, CT-e, NFS-e e MDF-e.
+Hoje o projeto conta com:
+• captura automática de documentos;
+• controle de NSU e consultas retroativas;
+• manifestação de NF-e;
+• recuperação automática dos XMLs completos;
+• classificação entre compras e transporte;
+• execução paralela dos robôs;
+• certificados digitais A1;
+• tratamento de rejeições e limites dos WebServices;
+• logs detalhados;
+• gerenciamento de clientes e licenciamento por módulo.
+Um dos maiores aprendizados foi perceber que trabalhar com DF-e vai muito além de “fazer uma chamada para a SEFAZ e baixar um XML”.
+Foi necessário estudar NSU, distribuição sequencial, manifestação, documentos resumidos, SOAP/XML, certificados digitais, limites de consumo e particularidades entre serviços e UFs.
+Na NF-e, o motor avança automaticamente pelos NSUs enquanto houver documentos disponíveis. Em testes, foi possível processar dezenas de documentos em sequência, inclusive em cenários de manifestação em lote seguida da recuperação dos XMLs completos.
+Na NFC-e, surgiu outro desafio: os serviços variam conforme a UF. Em São Paulo, foi necessário implementar a comunicação específica com a SEFAZ-SP e controlar automaticamente o período permitido para consultas retroativas.
+Com a evolução, o projeto deixou de ser um único código e passou a ter uma estrutura modular, separando os motores de NF-e, NFC-e, CT-e, NFS-e e MDF-e.
+O projeto nasceu como estudo, cresceu muito além da proposta inicial e agora considero esse ciclo concluído.
+A publicação anterior foi apagada justamente porque mostrava uma versão ainda muito simples. Agora sim faz sentido compartilhar o resultado final.
+Meu próximo projeto seguirá uma direção completamente diferente: quero desenvolver algo voltado a facilitar a rotina de famílias atípicas.
+📸 Os dados reais de clientes foram removidos das imagens.
+
+--- publi 3
+
+Emitir nota fiscal de serviço ainda consome horas de trabalho que poderiam estar em outro lugar.
+
+No emissor nacional, cada NFS-e segue o mesmo roteiro: consultar a planilha, preencher os dados do tomador, informar o serviço, digitar valores e retenções, emitir, conferir, baixar o PDF e o XML e enviar ao cliente por e-mail.
+
+Mesmo num cenário conservador, em que tudo funciona como deveria, com os dados organizados, o portal respondendo normalmente e nenhuma interrupção, o processo leva entre 3 e 5 minutos e cerca de 30 a 40 cliques por nota, além da digitação. Num lote de 15 notas, isso representa entre 45 minutos e uma hora de trabalho, de 450 a 600 cliques e muitas oportunidades para um erro de digitação virar cancelamento e retrabalho.
+
+Foi para resolver esse problema que desenvolvi o Nota Rápida, um aplicativo para Windows que automatiza a emissão de NFS-e Nacional em lote.
+
+Como funciona:
+
+• O cadastro do cliente começa pelo CNPJ: os dados da empresa são preenchidos automaticamente.
+• Cada tomador fica salvo com seus padrões de serviço, descrição, valor e retenções.
+• Na emissão, basta escolher a competência, selecionar as notas e confirmar.
+• O sistema valida, assina e transmite cada nota à NFS-e Nacional.
+• Cada cliente recebe a sua nota por e-mail automaticamente, com o PDF e o XML anexados.
+
+O resultado: um lote inteiro é emitido e entregue com cerca de 8 cliques e um minuto de atenção, seja ele de 5 ou de 50 notas.
+
+O Nota Rápida já está em operação, emitindo notas reais, e foi validado e aprovado pelo cliente que o utiliza no dia a dia. A evolução é contínua: cada ciclo de uso gera ajustes e novas funcionalidades, sempre a partir da rotina de quem usa o produto.
+
+Segurança e confiabilidade fazem parte do projeto desde o início:
+
+• A chave privada do certificado digital permanece no repositório do Windows e nunca é exportada.
+• Integração direta com a API oficial da NFS-e Nacional, com assinatura XMLDSig.
+• Toda nota passa por 12 regras de validação fiscal antes do envio.
+• A numeração é conferida na Sefin antes de cada transmissão, evitando duplicidade.
+• Os dados ficam em banco local cifrado, com trilha de auditoria.
+
+O aplicativo é construído com Tauri 2, React e TypeScript, com o motor fiscal em Python.
+
+Se o seu escritório ou empresa ainda emite notas uma a uma, terei prazer em mostrar o Nota Rápida funcionando. E profissionais de tecnologia que queiram conversar sobre o projeto também são bem-vindos.
+
+Todos os dados exibidos na imagem são fictícios e servem apenas de exemplo. Nenhuma informação real de clientes, notas ou certificados foi exposta.
+
+--- publi 4
+
+No dia a dia da área fiscal, muitas vezes nos deparamos com situações que exigem pesquisa, curiosidade e busca por soluções.
+
+Recentemente, precisei gerar os arquivos XML das NFSe de um cliente do município de Campo Belo/MG. Ao acessar o portal, percebi que o município já havia migrado para o Portal Nacional da NFS-e. A princípio, imaginei que seria simples, mas logo surgiu a dúvida: onde está a opção para baixar os arquivos XML?
+
+Diferente de muitos sistemas, o Portal Nacional não apresenta de forma evidente uma opção para download dos XMLs das notas emitidas ou tomadas. Depois de algumas pesquisas, encontrei uma extensão que, após instalada, permitiu gerar os XMLs em lote das NFSe de serviços prestados e tomados, além de disponibilizar um relatório com as informações das notas.
+
+Essa experiência reforçou algo que considero essencial na nossa profissão: nem sempre a resposta está no primeiro clique. Pesquisar, testar alternativas e compartilhar conhecimento faz parte da evolução de quem atua na área fiscal.
+
+Cada desafio resolvido é uma oportunidade de aprender algo novo e agregar mais valor ao nosso trabalho.
+
+--- public 5
+
+Toda empresa que emite NFS-e pelo sistema nacional (ADN) conhece o mesmo ritual todo mês: entrar no portal do Emissor Nacional e baixar PDF e XML de cada nota, uma por uma, manualmente.
+
+Automatizei esse processo e resolvi abrir o código.
+
+O nfse-nacional-cli é um CLI em Python que:
+- Autentica na API oficial da ADN via mTLS, usando certificado digital A1
+- Percorre o feed de distribuição de documentos fiscais e filtra apenas as notas emitidas pela sua empresa (por CNPJ), no mês e ano informados
+- Baixa PDF (DANFSe) e XML de cada nota, já nomeados e organizados em pastas por ano/mês
+- Mantém cache local para não reprocessar o histórico inteiro a cada execução
+
+Código aberto, feito para quem lida com esse mesmo processo manual todo mês.
+
+--- publi 6
+
+Finalizei a primeira etapa de um projeto que nasceu de uma dor bem real da operação 👨‍💻
+
+Hoje, para consultar NFS-e emitidas por nós e também por parceiros, o processo ainda exige entrar manualmente no Portal Nacional, fazer as buscas, baixar XMLs/PDFs e depois seguir com os lançamentos no ERP.
+Na prática, isso toma tempo, gera esforço repetitivo e acaba travando uma rotina que poderia ser muito mais fluida.
+
+Pensando nisso, desenvolvi uma aplicação em Java para automatizar essa busca de notas no Portal Nacional da NFS-e 🚀
+
+Nessa primeira fase, o foco foi:
+📌 automatizar a consulta de notas emitidas e recebidas
+📌 recuperar os XMLs das NFS-e
+📌 possibilitar também a geração dos PDFs
+📌 organizar os arquivos por lote, trazendo mais rastreabilidade para o processo
+
+O mais interessante é que essa entrega já começa a reduzir um gargalo operacional que impacta diretamente o dia a dia do time ⏱️
+
+Agora, o próximo passo do projeto é levar essa rotina para dentro do Sankhya, via módulo Java, para automatizar também a captura dessas notas e facilitar a integração com o ERP 🧩
+
+A ideia é que esse fluxo fique cada vez mais automático, reduzindo tarefas manuais e tornando o lançamento das notas muito mais rápido, confiável e escalável.
+
+É aquele tipo de projeto que começa resolvendo um problema pontual, mas que pode evoluir para gerar um ganho muito maior na operação como um todo 📈
+
+--- public 7
+
+Hoje precisei baixar 40 notas fiscais, uma por uma, no novo portal nacional, o NFS-e.
+
+⚠️ E o problema é claro: o portal não disponibiliza download em lote, nem PDF + XML juntos, muito menos um relatório consolidado que otimize o tempo e facilite a apuração mensal. Tempo que poderia estar sendo usado para análise, conferência e decisões — não para tarefas repetitivas.
+
+Ou seja, em plena era da tecnologia e da automação, uma atividade que deveria ser simples ainda vira um processo cansativo, manual e pouco eficiente.
+
+🤔 Fiquei com aquela sensação clássica de quem trabalha com fiscal:
+isso não pode ser normal — e, principalmente, isso precisa ter uma solução.
+
+Assim que cheguei em casa e abri o LinkedIn, vi esse post da Thabata e precisei compartilhar.
+Ela apresentou uma solução simples, usando uma extensão do Chrome, que resolve exatamente esse problema:
+baixar PDF, XML e relatório consolidado de forma rápida e organizada, em poucos cliques, economizou horas de trabalho.
+
+📌Isso não é “atalho”.
+📌Não é sobre “dar um jeitinho”.
+👉🏼 É inteligência operacional.
+
+Quando alguém identifica uma falha grave de processo e entrega uma solução prática, todo o mercado ganha. Especialmente quem vive, todos os dias, a rotina fiscal na prática — ainda mais em um cenário de reforma tributária, que exige mais controle, organização e eficiência das informações.
+
+👏🏼 Fica meu reconhecimento à Thabata por compartilhar algo que resolve um problema real, que hoje está sendo inaceitavelmente manual.
+
+Tecnologia não é luxo. É condição básica para produtividade. 📈 
+
+Seguimos avançando em excelência e comprometimento com a contabilidade. ✅
+
+--publi 8 
+
+🚨 A baixa em massa das NFS-e pelo novo Portal Nacional virou um desafio para muita gente da área fiscal/contabil neste início de mês. Entre instabilidades, erros e os famosos testes de “não sou um robô”, uma atividade simples acabou consumindo muito mais tempo do que deveria. 😅
+
+Depois de acompanhar as atualizações da ferramenta, finalmente consegui utilizar com sucesso a API Oficial da NFS-e, utilizando o Certificado Digital, para realizar as consultas e downloads em lote.
+
+O nome da extensão para usar no chrome é : Baixar NFSe Nota Fiscal de Serviço Eletrônica Emitidas e Recebidas
+
+✅ Baixa de XMLs em massa (emitidas e recebidas);
+
+✅ Download em arquivo ZIP;
+
+✅ Geração automática dos DANFSe (PDF);
+
+✅ Relatório completo das notas consultadas;
+
+✅ Processo incremental através do controle de NSU.
+
+📌 Sobre o “Último NSU Baixado”
+
+O NSU (Número Sequencial Único) funciona como um identificador de controle dos documentos já processados. A cada sincronização, o sistema registra o último NSU consultado e, nas próximas execuções, busca apenas as novas notas disponibilizadas após esse número, evitando retrabalho e downloads duplicados.
+
+📌 Organização dos arquivos
+
+Uma funcionalidade que achei interessante é a possibilidade de definir a estrutura das pastas automaticamente, separando por empresa, tipo de documento (Emitidas, Recebidas ou Eventos), ano e mês. Além disso, os XMLs podem ser organizados pela data de emissão e os arquivos podem ser nomeados com número da nota, nome do prestador/tomador e NSU.
+
+📌 DANFSe e planilha para controle
+
+Após o download dos XMLs, é possível gerar os DANFSe em PDF em lote. Os PDFs ficam salvos na mesma pasta do XML correspondente, com o mesmo nome do arquivo, facilitando a localização e conferência dos documentos.
+
+Outro recurso bastante útil é a opção “Baixar ZIP (XML + Excel)”, que gera uma planilha contendo as informações das notas consultadas, auxiliando no controle, conferência e conciliações da rotina fiscal.
+
+Depois de alguns dias de adaptação ao novo ambiente, a solução oficial parece estar ficando cada vez mais robusta e prática para quem trabalha diariamente com NFS-e.
+
+Alguém mais já conseguiu testar a API oficial? Como foi a experiência de vocês?
+
+
+#ReformaTributária #APIs #PortalContribuinte #NFSe #Fiscal #Contabilidade #Tributário
+
+---- publi 9
+
+Se você já precisou usar o Emissor Nacional de NFS-e no fechamento do mês, sabe exatamente do que eu tô falando. Emitir nota por nota, preencher os mesmos formulários repetidas vezes e navegar por várias páginas só para baixar arquivos XML e PDF é o tipo de trabalho braçal que drena a produtividade de qualquer equipe contábil ou financeira.
+
+Como desenvolvedor, me incomoda muito ver horas sendo gastas com tarefas repetitivas que um script poderia resolver. Então, decidi colocar a mão na massa e construir a Automação NFS-e PRO 🚀
+
+Criei uma extensão nativa para Chrome/Edge que basicamente assume o controle do Portal Nacional. O usuário só precisa importar uma planilha CSV (criei até um gerador visual dentro da extensão pra facilitar isso) e o robô preenche todas as abas automaticamente — Pessoas, Serviço e Valores — até concluir a emissão.
+
+Além disso, fiz um coletor inteligente que varre as páginas e baixa todos os XMLs e PDFs em lote no final, gerando um relatório financeiro em TXT detalhado, separando e somando automaticamente as notas emitidas e as substituidas/canceladas.
+
+Pra quem curte a parte técnica, esse projeto foi um baita desafio de engenharia. Construí tudo em Vanilla JS com Manifest V3, e lidar com o ecossistema do portal foi complexo:
+
+🔹 Arquitetura e Cross-Context: Tive que criar uma "ponte" (Bridge) injetando código no contexto MAIN da página. Só assim consegui usar postMessage para me comunicar diretamente com o jQuery e o Select2 nativos do portal.
+
+🔹 Race Conditions: Os campos de busca do governo usam chamadas AJAX pesadas. Para o robô não atropelar o site e tomar um "Bad Request", implementei rotinas assíncronas com MutationObservers e simuladores de digitação. O script "sente" quando o servidor responde para só então avançar.
+
+🔹 UI/UX: Em vez de popups invasivos, injetei painéis flutuantes usando Glassmorphism ( modal com efeito de vidro ) direto na tela do portal para o usuário acompanhar em tempo real qual nota está sendo processada.
+
+O resultado? Redução do tempo de operação em mais de 90% e eliminação de erros de digitação em campos sensíveis. Deu trabalho garantir a resiliência disso tudo, mas ver o robô processando dezenas de notas sozinho é bom demais!
+
+Deixei uma demonstração do funcionamento no vídeo abaixo! 👇
+
+Agora me diz aqui nos comentários: Se você é dev, qual nota você dá para a arquitetura dessa solução? E se você é contador ou do financeiro, o que você faria com as horas livres que essa automação ia te devolver no fim do mês? 😂👇
+
+🔗 O link do Repositório no GitHub estara no primeiro comentário!
+
+https://github.com/JEAN-ALMEIDA-CZO/AUTOMACAO-NFSE-PRO
+
+--- public 10 
+
+A área fiscal não pode se resumir a "apertar botões e gerar guias". Nós somos responsáveis por analisar dados, garantir conformidade e trazer inteligência tributária para as empresas.
+
+Há umas 3 semanas, compartilhei aqui um robô simples que criei para baixar notas no Portal da NFS-e Nacional. Mas baixar o arquivo é apenas o começo do problema. O verdadeiro desafio é o tempo que perdemos cruzando essas informações.
+
+Por isso, passei os últimos dias evoluindo essa automação. Não sou programador, sou da área fiscal. Meu objetivo com a tecnologia é "comprar" tempo para exercer a verdadeira contabilidade.
+
+A extensão agora não apenas faz o download em lote filtrando por datas e tipo de arquivo (XML/PDF), mas também atua como um painel de pré-auditoria:
+
+📊 Calcula faturamento e retenções federais/municipais (PIS, COFINS, IRRF, ISS, etc.) "no ar". A ferramenta já possui os percentuais legais configurados, ela permite identificar rapidamente se a Retenção das Contribuições Sociais destacada na nota foi menor do que o devido.
+
+🚨 Separa automaticamente o status das notas (canceladas e substituídas).
+
+📑 Exporta o relatório consolidado direto para CSV.
+
+O trabalho que antes levava horas de digitação e conferência manual, agora é feito em segundos. O foco deixa de ser "baixar a nota" e passa a ser "analisar a retenção".
+
+A tecnologia não substitui o analista. Como o XML original não sofre alteração estrutural em caso de cancelamento simples (apenas nas substituições), o sistema pode apresentar desentendimento ao ler notas canceladas. Portanto, a automação faz 99% do trabalho braçal, mas a conferência humana, principalmente do status de canceladas, segue sendo indispensável.
+
+A tecnologia não vem para substituir o analista fiscal, ela vem para libertá-lo do trabalho braçal.
+
+Como está o processo de vocês com o novo Portal Nacional? Já automatizaram essa rotina ou ainda estão sofrendo com os downloads manuais? 👇
+
+#TaxTech #AutomacaoFiscal #Contabilidade #Inovacao #InteligenciaTributaria #DepartamentoFiscal #Produtividade
+
+
+-- publi 11
+
+🚀 Automatizando o Controle Fiscal: Integração ponta a ponta entre Qive (Arquivei) e Oracle NetSuite.
+
+Quem trabalha com o ecossistema financeiro e fiscal sabe o desafio que é gerenciar a entrada de Notas Fiscais de Serviço eletrônicas (NFS-e). O processo manual de baixar documentos, validar dados de fornecedores e registrar tudo no ERP consome tempo precioso e abre margem para erros.
+
+Para resolver isso, estruturei um fluxo automatizado utilizando o n8n que conecta diretamente a Qive ao Oracle NetSuite.
+
+Como funciona a arquitetura desse fluxo:
+
+1️⃣ Busca e Paginação Inteligente: O fluxo é ativado via agendamento (Schedule), consulta a API da Qive e utiliza um sistema de cursor estático para garantir que nenhuma nota seja duplicada ou esquecida entre os lotes.
+ 
+2️⃣ Decodificação e Tratamento de Dados: As notas em Base64 são decodificadas e convertidas de XML para objetos JSON legíveis, extraindo dados complexos como detalhes de RPS, valores de serviços e tomadores.
+
+3️⃣ Validação de Cadastro em Tempo Real: Antes de injetar o documento, o fluxo assina as requisições via OAuth 1.0 e consulta o NetSuite pelo CNPJ do prestador.
+
+Se o fornecedor existe: A NFS-e é injetada automaticamente no ERP.
+
+Se o fornecedor não existe: O time recebe um alerta imediato por e-mail com os dados do fornecedor pendente para regularização. 
+
+4️⃣ Fechamento com Relatório Consolidado: Ao final do loop de processamento, um e-mail resumido é disparado para os responsáveis, separando o lote entre novas notas integradas, notas que já constavam no sistema (duplicadas) e eventuais erros de processamento.
+
+Resultados práticos:
+
+Eliminação do trabalho manual de digitação de NFS-e.
+
+Conformidade fiscal garantida e tempo de fechamento financeiro reduzido.
+
+Visibilidade total dos gargalos de cadastro em tempo real.
+
+Ferramentas utilizadas: n8n, Qive API, Oracle NetSuite RESTlets (JavaScript/Crypto), Gmail API.
+
+Como a sua empresa lida com a entrada de notas fiscais de serviço hoje? Já pensou em automatizar esse fluxo? 👇
+
+#n8n #Automation #NetSuite #Arquivei #Qive #Financeiro #Produtividade #LowCode #Integration
+
+-- publi 12 
+
+Uma necessidade real na área contábil se transformou em um projeto de desenvolvimento.
+
+Meu pai e meu avô, que trabalham com contabilidade, me apresentaram uma dificuldade recorrente: consultar, baixar e organizar manualmente as notas fiscais de serviço de diferentes clientes no Portal Nacional da NFS-e.
+
+Ao buscar alternativas, percebemos que muitas ferramentas disponíveis para automatizar esse processo são pagas. Foi aí que surgiu a ideia de desenvolver uma solução própria, adaptada às necessidades deles.
+
+Estou desenvolvendo uma aplicação desktop para Windows. Entre as funcionalidades implementadas e em validação estão:
+
+• Consulta de notas por CPF ou CNPJ e período.
+• Download de arquivos XML em lote.
+• Organização de notas emitidas e tomadas.
+• Identificação de certificados digitais instalados no Windows.
+• Nomeação automática dos arquivos pela chave da nota fiscal.
+• Interface gráfica simples, pensada para usuários sem conhecimentos técnicos.
+• Geração de executável para utilização sem precisar instalar Python.
+
+Durante o desenvolvimento, os principais desafios têm sido identificar corretamente os certificados digitais no Windows, utilizá-los sem exportar a chave privada e ajustar a paginação das consultas à API para garantir o download completo dos documentos.
+
+O projeto está em fase de testes e segue recebendo melhorias, especialmente em relação aos diferentes métodos de acesso ao portal, à segurança e à experiência do usuário.
+
+Tecnologias utilizadas: Python, Tkinter, PowerShell, PyInstaller e integração com a API do Ambiente de Dados Nacional da NFS-e.
+
+Os dados apresentados na imagem são fictícios e utilizados exclusivamente para demonstração. Nenhuma informação de clientes foi exposta.
+
+Github do projeto desenvolvido: https://lnkd.in/d59nvrHK
+
+

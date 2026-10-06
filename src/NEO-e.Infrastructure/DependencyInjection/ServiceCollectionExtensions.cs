@@ -10,6 +10,7 @@ using NEO_e.Infrastructure.Persistence;
 using NEO_e.Infrastructure.Configuration;
 using NEO_e.Infrastructure.FileSystem;
 using NEO_e.Infrastructure.Parsers;
+using NEO_e.Infrastructure.Export;
 
 namespace NEO_e.Infrastructure.DependencyInjection;
 
@@ -25,6 +26,8 @@ public static class ServiceCollectionExtensions
         services.AddOptions<AdnSettings>().BindConfiguration(AdnSettings.SectionName);
         services.AddOptions<EnvironmentSettings>().BindConfiguration(EnvironmentSettings.SectionName);
         services.AddOptions<LoggingSettings>().BindConfiguration(LoggingSettings.SectionName);
+        services.AddOptions<SefazSettings>().BindConfiguration(SefazSettings.SectionName);
+        services.AddOptions<AdnManifestationSettings>().BindConfiguration(AdnManifestationSettings.SectionName);
 
         services.AddSingleton<IAppSettingsProvider, AppSettingsProvider>();
         services.AddSingleton<IEnvironmentContext, EnvironmentContext>();
@@ -38,6 +41,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ICertificateRepository, CertificateRepository>();
         services.AddSingleton<IXmlParser, NfseXmlParser>();
         services.AddSingleton<IFileWriter, AtomicXmlFileWriter>();
+        services.AddSingleton<IExcelExporter, ClosedXmlExcelExporter>();
 
         services.AddSingleton<INsuRepository>(sp =>
         {
@@ -68,6 +72,8 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddSingleton<IAdnClient, AdnHttpClient>();
+        services.AddSingleton<IManifestationClient, SefazManifestationClient>();
+        services.AddSingleton<IManifestationClient, AdnManifestationClient>();
 
         return services;
     }

@@ -98,6 +98,44 @@ public sealed record EventoDocumento(
     DateTimeOffset DataHora,
     string XmlEvento);
 
+// Manifestação (RFC-002)
+public sealed record ManifestationEvent(
+    string TipoEvento,           // 210210, 210200, 210220, 210240
+    ChaveAcesso ChaveAcesso,
+    Cnpj CnpjDestinatario,
+    DateTimeOffset DataHoraEvento,
+    int SequenciaEvento,
+    string? Justificativa);      // Obrigatório para 210240
+
+public sealed record ManifestationResult
+{
+    public bool Sucesso { get; init; }
+    public string? Protocolo { get; init; }
+    public string? CStat { get; init; }
+    public string? XMotivo { get; init; }
+    public string? ChaveAcesso { get; init; }
+    public string? Erro { get; init; }
+
+    public static ManifestationResult Success(string? protocolo, string? cStat, string? xMotivo, string? chaveAcesso)
+        => new() { Sucesso = true, Protocolo = protocolo, CStat = cStat, XMotivo = xMotivo, ChaveAcesso = chaveAcesso };
+
+    public static ManifestationResult Failure(string erro)
+        => new() { Sucesso = false, Erro = erro };
+}
+
+public sealed record EventStatus
+{
+    public string TipoEvento { get; init; } = string.Empty;
+    public DateTimeOffset DataHora { get; init; }
+    public string XmlEvento { get; init; } = string.Empty;
+}
+
+public interface IManifestationClient
+{
+    Task<ManifestationResult> SendEventAsync(ManifestationEvent evento, X509Certificate2 certificate, CancellationToken ct);
+    Task<EventStatus?> GetEventStatusAsync(ChaveAcesso chave, X509Certificate2 certificate, CancellationToken ct);
+}
+
 public interface IXmlParser
 {
     DocumentoFiscal ParseNfse(string xml, Nsu nsu);

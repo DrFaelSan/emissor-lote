@@ -82,3 +82,21 @@ public sealed class LoggingSettings
     public int RetainedFileCountLimit { get; init; } = 31;
     public long FileSizeLimitBytes { get; init; } = 10_485_760;
 }
+
+public sealed class SefazSettings
+{
+    public const string SectionName = "App:Sefaz";
+    
+    public string RecepcaoEventoUrl { get; init; } = "https://nfe.sefaz.sp.gov.br/nfe/autorizacao/RecepcaoEvento";
+    public string DistribuicaoDFeUrl { get; init; } = "https://nfe.sefaz.sp.gov.br/nfe/distribuicao/DFePorNSU";
+    public int CodigoOrgao { get; init; } = 35;
+    public int TpAmb { get; init; } = 2;
+    public int TimeoutSeconds { get; init; } = 60;
+}
+
+public sealed class AdnManifestationSettings
+{
+    public const string SectionName = "App:AdnManifestation";
+    
+    public int TimeoutSeconds { get; init; } = 60;
+}
