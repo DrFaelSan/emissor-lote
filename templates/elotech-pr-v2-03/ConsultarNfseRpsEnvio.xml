@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ConsultarNfseRpsEnvio>
+	<IdentificacaoRps>
+		<Numero>{@Numero}</Numero>
+		<Serie>{@Serie}</Serie>
+		<Tipo>{@Tipo}</Tipo>
+	</IdentificacaoRps>
+	<IdentificacaoRequerente>
+		<CpfCnpj>
+			{@ifCpfPrestador}<Cpf>{@CpfPrestador}</Cpf>{@endifCpfPrestador} 
+			{@ifCnpjPrestador}<Cnpj>{@CnpjPrestador}</Cnpj>{@endifCnpjPrestador}
+		</CpfCnpj>
+		{@ifInscricaoMunicipal}<InscricaoMunicipal>{@InscricaoMunicipal}</InscricaoMunicipal>{@endifInscricaoMunicipal}
+		<Senha>{@Senha}</Senha>
+		<Homologa>{@Homologa}</Homologa>
+	</IdentificacaoRequerente>
+</ConsultarNfseRpsEnvio>

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<GerarNfseEnvio xmlns="http://megasoftarrecadanet.com.br/xsd/nfse_v01.xsd">
+<Rps>
+	<InfDeclaracaoPrestacaoServico{@ifIdInfDeclaracaoPrestacaoServico} Id="{@idInfDeclaracaoPrestacaoServico}"{@endifIdInfDeclaracaoPrestacaoServico}>
+		<Rps>
+			<IdentificacaoRps>
+				<Numero>{@NumeroRps}</Numero>
+			</IdentificacaoRps>
+			<DataEmissao>{@DataEmissao}</DataEmissao>
+		</Rps>
+		<Servico>
+			<Valores>
+				<ValorServicos>{@ValorServicos}</ValorServicos>
+				{@ifValorDeducoes}<ValorDeducoes>{@ValorDeducoes}</ValorDeducoes>{@endifValorDeducoes}
+				{@ifValorPis}<ValorPis>{@ValorPis}</ValorPis>{@endifValorPis}
+				{@ifValorCofins}<ValorCofins>{@ValorCofins}</ValorCofins>{@endifValorCofins}
+				{@ifValorInss}<ValorInss>{@ValorInss}</ValorInss>{@endifValorInss}
+				{@ifValorIr}<ValorIr>{@ValorIr}</ValorIr>{@endifValorIr}
+				{@ifValorCsll}<ValorCsll>{@ValorCsll}</ValorCsll>{@endifValorCsll}
+				{@ifOutrasRetencoes}<OutrasRetencoes>{@OutrasRetencoes}</OutrasRetencoes>{@endifOutrasRetencoes}
+				{@ifAliquota}<Aliquota>{@Aliquota}</Aliquota>{@endifAliquota}
+				{@ifDescontoIncondicionado}<DescontoIncondicionado>{@DescontoIncondicionado}</DescontoIncondicionado>{@endifDescontoIncondicionado}
+				{@ifDescontoCondicionado}<DescontoCondicionado>{@DescontoCondicionado}</DescontoCondicionado>{@endifDescontoCondicionado}
+			</Valores>
+			<IssRetido>{@IssRetido}</IssRetido>
+			<CodigoMunicipio>{@CodigoMunicipioServico}</CodigoMunicipio>
+			{@ifCodigoTributacaoMunicipio}
+			<!--CodigoTributacaoMunicipio>{@CodigoTributacaoMunicipio}</CodigoTributacaoMunicipio-->
+			<!--Na MegaSoft, o código de tributação do município é o item da lista de serviço!-->
+			<CodigoTributacaoMunicipio>{@ItemListaServico}</CodigoTributacaoMunicipio>
+			{@endifCodigoTributacaoMunicipio}
+			<Discriminacao>{@Discriminacao}</Discriminacao>
+			{@ifInformacoesComplementares}
+			<InfAdicional>{@InformacoesComplementares}</InfAdicional>
+			{@endifInformacoesComplementares}
+		</Servico>
+		<Prestador>
+			<CpfCnpj>
+				{@ifCpfPrestador}
+				<Cpf>{@CpfPrestador}</Cpf>
+				{@endifCpfPrestador}
+				{@ifCnpjPrestador}
+				<Cnpj>{@CnpjPrestador}</Cnpj>
+				{@endifCnpjPrestador}
+			</CpfCnpj>
+			<InscricaoMunicipal>{@InscricaoMunicipalPrestador}</InscricaoMunicipal>
+		</Prestador>
+		<Tomador>
+			<IdentificacaoTomador>
+				<CpfCnpj>
+					{@ifCpfTomadorServico}
+					<Cpf>{@CpfTomadorServico}</Cpf>
+					{@endifCpfTomadorServico}
+					{@ifCnpjTomadorServico}
+					<Cnpj>{@CnpjTomadorServico}</Cnpj>
+					{@endifCnpjTomadorServico}
+				</CpfCnpj>
+				{@ifInscricaoMunicipalTomadorServico}
+				<InscricaoMunicipal>{@InscricaoMunicipalTomadorServico}</InscricaoMunicipal>
+				{@endifInscricaoMunicipalTomadorServico}
+			</IdentificacaoTomador>
+
+			<RazaoSocial>{@RazaoSocialTomadorServico}</RazaoSocial>
+			{@ifEndereco}
+			<Endereco>
+				<Endereco>{@Endereco}</Endereco>
+				<Numero>{@Numero}</Numero>
+				<Complemento>{@Complemento}</Complemento>
+				<Bairro>{@Bairro}</Bairro>
+				<Cep>{@Cep}</Cep>
+				<CodigoMunicipio>{@CodigoMunicipioTomadorServico}</CodigoMunicipio>
+			</Endereco>
+			{@endifEndereco}
+		</Tomador>
+	</InfDeclaracaoPrestacaoServico>
+	<!--Signature>string</Signature-->
+</Rps>
+</GerarNfseEnvio>

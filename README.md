@@ -128,7 +128,7 @@ Antes de implementar um endpoint, registrar manual, Swagger, versao, ambiente, r
 6. Validar homologacao com dados controlados.
 7. Habilitar operacoes conclusivas somente apos aprovacao tecnica e fiscal.
 
-Os comandos definitivos de build, teste, formatacao e publicacao devem ser adicionados aqui quando a solution for criada.
+Os comandos definitivos de build, teste, formatacao e publicacao estao documentados em [docs/INSTALAR-E-EXECUTAR.md](docs/INSTALAR-E-EXECUTAR.md).
 
 ## Convencoes de arquivos
 
@@ -138,5 +138,12 @@ Os comandos definitivos de build, teste, formatacao e publicacao devem ser adici
 - Decisoes que alteram contrato devem gerar documento em `docs/decisions/`.
 - Evidencias de homologacao devem ser sanitizadas antes de entrar no repositorio.
 
+## Como instalar e executar
 
+O passo a passo completo de instalacao, execucao em Debug, execucao em Release, publicacao e distribuicao esta em [docs/INSTALAR-E-EXECUTAR.md](docs/INSTALAR-E-EXECUTAR.md).
+
+Publicacao rapida (self-contained, win-x64):
+
+```powershell
 dotnet publish src/NEO-e.App/NEO-e.App.csproj -c Release -r win-x64 --self-contained true
+```

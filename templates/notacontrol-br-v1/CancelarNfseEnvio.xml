@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CancelarNfseEnvio xmlns="http://www.sped.fazenda.gov.br/nfse">
+	<pedRegEvento versao="1.01">
+		<infPedReg Id="{@IdPedidoRegistroEvento}">
+			<tpAmb>{@tpAmb}</tpAmb>
+			<verAplic>{@verAplic}</verAplic>
+			<dhEvento>{@dhEvento}</dhEvento>
+
+			<!-- CHOICE CNPJ/CPF AUTOR -->
+			{@ifCNPJAutor}
+			<CNPJAutor>{@CNPJAutor}</CNPJAutor>
+			{@endifCNPJAutor}
+
+			{@ifCPFAutor}
+			<CPFAutor>{@CPFAutor}</CPFAutor>
+			{@endifCPFAutor}
+
+			<chNFSe>{@chNFSe}</chNFSe>
+
+			{@ifNPedRegEvento}
+			<nPedRegEvento>{@nPedRegEvento}</nPedRegEvento>
+			{@endifNPedRegEvento}
+
+			{@ifE101101}
+			<e101101>
+				<xDesc>Cancelamento de NFS-e</xDesc>
+				<cMotivo>{@cMotivo}</cMotivo>
+				<xMotivo>{@xMotivo}</xMotivo>
+			</e101101>
+			{@endifE101101}
+
+			{@ifE105102}
+			<e105102>
+				<xDesc>{@xDesc}</xDesc>
+				<cMotivo>{@cMotivo}</cMotivo>
+				{@ifXMotivo}
+				<xMotivo>{@xMotivo}</xMotivo>
+				{@endifXMotivo}
+				<chSubstituida>{@chSubstituida}</chSubstituida>
+			</e105102>
+			{@endifE105102}
+
+			{@ifE101103}
+			<e101103>
+				<xDesc>{@xDesc}</xDesc>
+				<!--  Código do motivo da solicitação de análise fiscal para cancelamento de NFS-e:
+				1 - Erro na Emissão;
+				2 - Serviço não Prestado;
+				9 - Outros.  -->
+				<cMotivo>{@cMotivo}</cMotivo>
+				<xMotivo>{@xMotivo}</xMotivo>
+			</e101103>
+			{@endifE101103}
+
+			{@ifE105104}
+			<e105104>
+				<xDesc>{@xDesc}</xDesc>
+				<CPFAgTrib>{@CPFAgTrib}</CPFAgTrib>
+				{@ifNProcAdm}
+				<nProcAdm>{@nProcAdm}</nProcAdm>
+				{@endifNProcAdm}
+				<cMotivo>{@cMotivo}</cMotivo>
+				<xMotivo>{@xMotivo}</xMotivo>
+			</e105104>
+			{@endifE105104}
+
+			{@ifE105105}
+			<e105105>
+				<xDesc>{@xDesc}</xDesc>
+				<CNPJAgTrib>{@CNPJAgTrib}</CNPJAgTrib>
+				{@ifNProcAdm}
+				<nProcAdm>{@nProcAdm}</nProcAdm>
+				{@endifNProcAdm}
+				<cMotivo>{@cMotivo}</cMotivo>
+				<xMotivo>{@xMotivo}</xMotivo>
+			</e105105>
+			{@endifE105105}
+
+		</infPedReg>
+		<!--Signature-->
+	</pedRegEvento>
+</CancelarNfseEnvio>

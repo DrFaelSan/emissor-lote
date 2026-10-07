@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CancelarNfseEnvio>
+	<IdentificacaoRequerente>
+		<CpfCnpj>
+			{@ifCnpj}<Cnpj>{@Cnpj}</Cnpj>{@endifCnpj}
+			{@ifCpf}<Cpf>{@Cpf}</Cpf>{@endifCpf}
+		</CpfCnpj>
+		<InscricaoMunicipal>{@InscricaoMunicipal}</InscricaoMunicipal>
+		<Senha>{@Senha}</Senha>
+		<Homologa>{@Homologa}</Homologa>
+	</IdentificacaoRequerente>
+	<Pedido>
+		<InfPedidoCancelamento>
+			<IdentificacaoNfse>
+				<Numero>{@Numero}</Numero>
+				<CpfCnpj>
+					{@ifCnpj}<Cnpj>{@Cnpj}</Cnpj>{@endifCnpj}
+					{@ifCpf}<Cpf>{@Cpf}</Cpf>{@endifCpf}
+				</CpfCnpj>
+				{@ifInscricaoMunicipal}<InscricaoMunicipal>{@InscricaoMunicipal}</InscricaoMunicipal>{@endifInscricaoMunicipal}
+				<CodigoMunicipio>{@CodigoMunicipio}</CodigoMunicipio>
+			</IdentificacaoNfse>
+			<ChaveAcesso>{@CodigoVerificacao}</ChaveAcesso>
+			{@ifCodigoCancelamento}<CodigoCancelamento>{@CodigoCancelamento}</CodigoCancelamento>{@endifCodigoCancelamento}
+		</InfPedidoCancelamento>
+		<!--Signature>string</Signature-->
+	</Pedido>
+</CancelarNfseEnvio>

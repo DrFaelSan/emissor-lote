@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:nfse="http://www.fiorilli.com.br/nfse-nacional">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <!-- Cada template de metodo encapsula a propria acao (<nfse:recepcionarDps>, <nfse:CancelarNFSeEnvio>, <nfse:ConsultarLoteDpsEnvio>...), por isso aqui nao ha wrapper: assim o corpo pode ter elementos irmaos do documento assinado (ex.: <nfse:IM>) e o 'action' do parametro serve so como SOAPAction -->
+      {@xml}
+   </soapenv:Body>
+</soapenv:Envelope>

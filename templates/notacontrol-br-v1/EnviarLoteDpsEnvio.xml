@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<EnviarLoteDpsEnvio xmlns="http://www.sped.fazenda.gov.br/nfse">
+	<LoteDps id="lt{@idRps}">
+		<NumeroLote>{@NumeroLote}</NumeroLote>
+		<Prestador>
+			<!-- FAZER IF CNPJ/CPF -->
+			{@ifCNPJPrestador}
+			<CNPJ>{@CNPJPrestador}</CNPJ>
+			{@endifCNPJPrestador}
+
+			{@ifCPFPrestador}
+			<CPF>{@CPFPrestador}</CPF>
+			{@endifCPFPrestador}
+			
+			<IM>{@IMPrestador}</IM>
+		</Prestador>
+		<QuantidadeDps>{@QuantidadeDps}</QuantidadeDps>
+		<ListaDps>
+			{@ListaDps}
+		</ListaDps>
+	</LoteDps>
+	<!--Signature></Signature-->
+</EnviarLoteDpsEnvio>

@@ -1,0 +1,9 @@
+<DadosDeducao>
+	<TipoDeducao>{@TipoDeducao}</TipoDeducao>
+	{@ifCpf}<Cpf>{@Cpf}</Cpf>{@endifCpf}
+	{@ifCnpj}<Cnpj>{@Cnpj}</Cnpj>{@endifCnpj}
+	<!-- <NumeroNotaFiscalReferencia>{@NumeroNotaFiscalReferencia}</NumeroNotaFiscalReferencia> -->
+	<!-- <ValorTotalNotaFiscal>{@ValorTotalNotaFiscal}</ValorTotalNotaFiscal> -->
+	<!-- <PercentualADeduzir>{@PercentualADeduzir}</PercentualADeduzir> -->
+	<!-- <ValorADeduzir>{@ValorADeduzir}</ValorADeduzir> -->
+</DadosDeducao>
