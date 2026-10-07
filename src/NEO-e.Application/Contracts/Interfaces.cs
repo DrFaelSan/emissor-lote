@@ -193,6 +193,12 @@ public interface IProgressReporter
     void ReportWarning(string mensagem);
 }
 
+public interface ISimulationXmlWriter
+{
+    string OutputFolder { get; }
+    Task<string> WriteAsync(Guid executionId, string fileName, string content, CancellationToken ct);
+}
+
 public interface IGapAnalyzer
 {
     Task<GapAnalysisResult> AnalyzeAsync(Cnpj cnpj, CancellationToken ct);

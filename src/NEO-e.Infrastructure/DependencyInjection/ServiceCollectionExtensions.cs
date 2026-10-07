@@ -48,6 +48,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IXmlParser, CompositeXmlParser>();
         services.AddSingleton<IReceivedDocumentIndexer, ReceivedDocumentIndexer>();
         services.AddSingleton<IFileWriter, AtomicXmlFileWriter>();
+        services.AddSingleton<ISimulationXmlWriter>(_ => new SimulationXmlFileWriter());
         services.AddSingleton<IExcelExporter, ClosedXmlExcelExporter>();
         services.AddSingleton<ICredentialManager, DpapiCredentialManager>();
 

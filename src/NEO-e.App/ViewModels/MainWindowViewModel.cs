@@ -21,6 +21,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
     private readonly DiscoverCertificatesUseCase _discoverCertificates;
     private readonly LoadCertificateUseCase _loadCertificate;
     private readonly Lazy<SincronizarCarteiraUseCase> _sincronizarCarteira;
+    private readonly Lazy<SimularCarteiraUseCase> _simularCarteira;
     private readonly Lazy<ResetNsuUseCase> _resetNsuUseCase;
     private readonly IGapAnalyzer _gapAnalyzer;
     private readonly IExcelExporter _excelExporter;
@@ -31,6 +32,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
     private readonly IEnvironmentContext _environment;
     private CancellationTokenSource? _discoveryCancellation;
     private CancellationTokenSource? _syncCancellation;
+    private CancellationTokenSource? _operationCancellation;
     private string _certificateFolder;
     private string _destinationFolder;
     private string _selectedEnvironment;
@@ -39,6 +41,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
     private string _statusMessage = "Pronto para configurar a sincronizacao.";
     private bool _isBusy;
     private bool _isSyncing;
+    private bool _isSimulationMode;
+    private bool _simulationFailureEnabled;
     private int _totalEmpresas;
     private int _empresasProcessadas;
     private int _totalDocumentos;
@@ -46,11 +50,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
     private string _currentCnpj = string.Empty;
     private string _currentNsu = string.Empty;
     private bool _resetNsuConfirmed;
+    private DateTimeOffset _syncStartedAt;
+    private List<ExecutionRecord> _lastExecutionRecords = [];
 
     public MainWindowViewModel(
         DiscoverCertificatesUseCase discoverCertificates,
         LoadCertificateUseCase loadCertificate,
         Lazy<SincronizarCarteiraUseCase> sincronizarCarteira,
+        Lazy<SimularCarteiraUseCase> simularCarteira,
         Lazy<ResetNsuUseCase> resetNsuUseCase,
         IGapAnalyzer gapAnalyzer,
         IExcelExporter excelExporter,
@@ -63,6 +70,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         _discoverCertificates = discoverCertificates;
         _loadCertificate = loadCertificate;
         _sincronizarCarteira = sincronizarCarteira;
+        _simularCarteira = simularCarteira;
         _resetNsuUseCase = resetNsuUseCase;
         _gapAnalyzer = gapAnalyzer;
         _excelExporter = excelExporter;
@@ -77,24 +85,27 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         _selectedFolderStructure = settings.Storage.FolderStructure.ToString();
 
         ReloadCertificatesCommand = new AsyncRelayCommand(DiscoverCertificatesAsync, () => !IsBusy && !IsSyncing);
-        ClearCertificatesCommand = new RelayCommand(ClearCertificates, () => !IsBusy && !IsSyncing && Certificates.Count > 0);
-        SelectAllCommand = new RelayCommand(SelectAllCertificates, () => !IsBusy && !IsSyncing && Certificates.Count > 0);
-        ClearSelectionCommand = new RelayCommand(ClearCertificateSelection, () => !IsBusy && !IsSyncing && Certificates.Count > 0);
+        ClearCertificatesCommand = new RelayCommand(ClearCertificates, () => !IsBusy && !IsSyncing && GetVisibleCertificates().Any());
+        SelectAllCommand = new RelayCommand(SelectAllCertificates, () => !IsBusy && !IsSyncing && GetVisibleCertificates().Any());
+        ClearSelectionCommand = new RelayCommand(ClearCertificateSelection, () => !IsBusy && !IsSyncing && GetVisibleCertificates().Any());
         ValidateConfigurationCommand = new RelayCommand(ValidateConfiguration, () => !IsBusy && !IsSyncing);
         StartSyncCommand = new AsyncRelayCommand(StartSyncAsync, () => !IsBusy && !IsSyncing && CanStartSync);
-        CancelSyncCommand = new AsyncRelayCommand(CancelSyncAsync, () => IsSyncing);
+        CancelSyncCommand = new AsyncRelayCommand(CancelSyncAsync, () => IsSyncing || IsBusy);
         ResetNsuCommand = new AsyncRelayCommand(ResetNsuAsync, () => !IsBusy && !IsSyncing && CanResetNsu());
         AnalyzeGapsCommand = new AsyncRelayCommand(AnalyzeGapsAsync, () => !IsBusy && !IsSyncing && CanAnalyzeGaps());
         RecoverGapsCommand = new AsyncRelayCommand(RecoverGapsAsync, () => !IsBusy && !IsSyncing && CanRecoverGaps());
         ExportExecutionCommand = new AsyncRelayCommand(ExportExecutionAsync, () => !IsBusy && !IsSyncing);
         ExportInventoryCommand = new AsyncRelayCommand(ExportInventoryAsync, () => !IsBusy && !IsSyncing);
         IndexReceivedDocumentsCommand = new AsyncRelayCommand(IndexReceivedDocumentsAsync, () => !IsBusy && !IsSyncing);
-        ChooseCertificateFolderCommand = new RelayCommand(ChooseCertificateFolder, () => !IsBusy && !IsSyncing);
+        ChooseCertificateFolderCommand = new AsyncRelayCommand(ChooseCertificateFolderAsync, () => !IsBusy && !IsSyncing);
         ChooseDestinationFolderCommand = new RelayCommand(ChooseDestinationFolder, () => !IsBusy && !IsSyncing);
+        ToggleSimulationModeCommand = new RelayCommand(ToggleSimulationMode, () => !IsBusy && !IsSyncing);
         CertificatesView = CollectionViewSource.GetDefaultView(Certificates);
         CertificatesView.Filter = FilterCertificate;
         _environment.EnvironmentChanged += OnEnvironmentChanged;
     }
+
+    public bool IsOperationRunning => IsBusy || IsSyncing;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -103,6 +114,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
 
     public IReadOnlyList<string> Environments { get; } = ["Restrita", "Producao"];
     public IReadOnlyList<string> FolderStructures { get; } = ["Flat", "YearMonthType", "YearMonth", "TypeYearMonth"];
+    public string AppVersion => System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3) ?? "Versao indisponivel";
 
     public AsyncRelayCommand ReloadCertificatesCommand { get; }
     public RelayCommand ClearCertificatesCommand { get; }
@@ -117,8 +129,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
     public AsyncRelayCommand ExportExecutionCommand { get; }
     public AsyncRelayCommand ExportInventoryCommand { get; }
     public AsyncRelayCommand IndexReceivedDocumentsCommand { get; }
-    public RelayCommand ChooseCertificateFolderCommand { get; }
+    public AsyncRelayCommand ChooseCertificateFolderCommand { get; }
     public RelayCommand ChooseDestinationFolderCommand { get; }
+    public RelayCommand ToggleSimulationModeCommand { get; }
 
     public ICollectionView CertificatesView { get; }
 
@@ -146,11 +159,20 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         set
         {
             if (SetField(ref _searchText, value))
+            {
                 CertificatesView.Refresh();
+                OnPropertyChanged(nameof(VisibleCertificateCount));
+                OnPropertyChanged(nameof(EmptyStateMessage));
+            }
         }
     }
 
     public int VisibleCertificateCount => CertificatesView.Cast<object>().Count();
+    public string EmptyStateMessage => !string.IsNullOrWhiteSpace(SearchText)
+        ? "Nenhum resultado corresponde ao texto de busca."
+        : IsSimulationMode
+            ? "Nenhuma empresa simulada disponivel. Desative e ative a simulacao para recarregar os dados."
+            : "Nenhum certificado carregado. Escolha uma pasta de certificados para iniciar.";
 
     public string SelectedEnvironment
     {
@@ -162,7 +184,50 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         }
     }
 
-    public string ActiveEnvironmentLabel => $"Ambiente ativo: {_environment.Current}";
+    public string ActiveEnvironmentLabel => $"Ambiente ativo: {EnvironmentDescription}";
+    public string EnvironmentDescription => _environment.Current == EnvironmentType.Restrita
+        ? "Restrita (homologacao)"
+        : "PRODUCAO (API REAL)";
+
+    public bool IsSimulationMode
+    {
+        get => _isSimulationMode;
+        private set
+        {
+            if (!SetField(ref _isSimulationMode, value))
+                return;
+            CertificatesView.Refresh();
+            OnPropertyChanged(nameof(HasSelectedCertificates));
+            OnPropertyChanged(nameof(VisibleCertificateCount));
+            OnPropertyChanged(nameof(EmptyStateMessage));
+            OnPropertyChanged(nameof(CanStartSync));
+            OnPropertyChanged(nameof(CanStartSyncReason));
+            OnPropertyChanged(nameof(SimulationOutputLabel));
+            OnPropertyChanged(nameof(SimulationModeButtonText));
+            OnPropertyChanged(nameof(StartSyncButtonText));
+            OnPropertyChanged(nameof(DocumentCountLabel));
+            StartSyncCommand.RaiseCanExecuteChanged();
+            SelectAllCommand.RaiseCanExecuteChanged();
+            ClearSelectionCommand.RaiseCanExecuteChanged();
+            AnalyzeGapsCommand.RaiseCanExecuteChanged();
+            RecoverGapsCommand.RaiseCanExecuteChanged();
+            ResetNsuCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public bool SimulationFailureEnabled
+    {
+        get => _simulationFailureEnabled;
+        set => SetField(ref _simulationFailureEnabled, value);
+    }
+
+    public string SimulationOutputLabel =>
+        $"Saida de teste: {Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NEO-e", "Simulacao")}";
+    public string SimulationModeButtonText => IsSimulationMode
+        ? "Desativar simulacao (TESTE)"
+        : "Ativar simulacao (TESTE)";
+    public string StartSyncButtonText => IsSimulationMode ? "Executar simulacao" : "Baixar (XML)";
+    public string DocumentCountLabel => IsSimulationMode ? "XML SIMULADOS" : "XML GRAVADOS";
 
     public string StatusMessage
     {
@@ -183,8 +248,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
                 ClearSelectionCommand.RaiseCanExecuteChanged();
                 ValidateConfigurationCommand.RaiseCanExecuteChanged();
                 StartSyncCommand.RaiseCanExecuteChanged();
+                ToggleSimulationModeCommand.RaiseCanExecuteChanged();
+                CancelSyncCommand.RaiseCanExecuteChanged();
                 ResetNsuCommand.RaiseCanExecuteChanged();
                 IndexReceivedDocumentsCommand.RaiseCanExecuteChanged();
+                OnPropertyChanged(nameof(CanStartSync));
+                OnPropertyChanged(nameof(IsOperationRunning));
             }
         }
     }
@@ -202,6 +271,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
                 ClearSelectionCommand.RaiseCanExecuteChanged();
                 ValidateConfigurationCommand.RaiseCanExecuteChanged();
                 StartSyncCommand.RaiseCanExecuteChanged();
+                ToggleSimulationModeCommand.RaiseCanExecuteChanged();
                 CancelSyncCommand.RaiseCanExecuteChanged();
                 ResetNsuCommand.RaiseCanExecuteChanged();
                 IndexReceivedDocumentsCommand.RaiseCanExecuteChanged();
@@ -209,6 +279,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
                 OnPropertyChanged(nameof(TotalEmpresas));
                 OnPropertyChanged(nameof(TotalXmlGravados));
                 OnPropertyChanged(nameof(TotalErros));
+                OnPropertyChanged(nameof(CanStartSync));
+                OnPropertyChanged(nameof(IsOperationRunning));
             }
         }
     }
@@ -218,11 +290,23 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
     public int TotalErros => _totalErros;
     public int EmpresasProcessadas => _empresasProcessadas;
 
-    public bool HasSelectedCertificates => Certificates.Any(c => c.Selected);
+    public bool HasSelectedCertificates => GetVisibleCertificates().Any(c => c.Selected);
 
     public string SyncProgressText => _isSyncing
         ? $"Sincronizando: {_empresasProcessadas}/{_totalEmpresas} empresas | {_totalDocumentos} docs | {_totalErros} erros | Atual: {_currentCnpj} NSU {_currentNsu}"
         : string.Empty;
+
+    public Task InitializeAsync()
+    {
+        if (!_settings.Certificates.AutoDiscover)
+            return Task.CompletedTask;
+        if (Directory.Exists(CertificateFolder))
+            return DiscoverCertificatesAsync();
+
+        StatusMessage = "Pasta de certificados nao encontrada. Escolha uma pasta para carregar certificados.";
+        AddLog(StatusMessage, LogLevel.Warning);
+        return Task.CompletedTask;
+    }
 
     public void SetCertificateFolder(string path) => CertificateFolder = path;
 
@@ -250,6 +334,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         try
         {
             var certificates = await _discoverCertificates.ExecuteAsync(CertificateFolder, _discoveryCancellation.Token);
+            foreach (var simulationRow in Certificates.Where(c => c.IsSimulation).ToList())
+                Certificates.Remove(simulationRow);
             Certificates.Clear();
             foreach (var certificate in certificates)
             {
@@ -264,22 +350,27 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
                     AddLog($"Senha carregada do armazenamento seguro para {row.FileName}.", LogLevel.Info);
                 }
                 
-                Certificates.Add(row);
+                AddCertificateRow(row);
             }
             
             // Carregar NSU persistido para cada certificado
             await LoadPersistedNsuAsync(_discoveryCancellation.Token);
+            if (IsSimulationMode)
+                EnsureSimulationCompanies();
             
             CertificatesView.Refresh();
             OnPropertyChanged(nameof(VisibleCertificateCount));
+            OnPropertyChanged(nameof(EmptyStateMessage));
             AddLog($"{Certificates.Count} certificado(s) encontrado(s).", LogLevel.Success);
         }
         catch (OperationCanceledException)
         {
+            StatusMessage = "Leitura de certificados cancelada.";
             AddLog("Leitura de certificados cancelada.", LogLevel.Warning);
         }
         catch (Exception exception)
         {
+            StatusMessage = "Falha ao carregar certificados.";
             AddLog(exception.Message, LogLevel.Error);
         }
         finally
@@ -296,7 +387,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
 
     private async Task LoadPersistedNsuAsync(CancellationToken ct)
     {
-        foreach (var cert in Certificates)
+        foreach (var cert in Certificates.Where(c => !c.IsSimulation))
         {
             ct.ThrowIfCancellationRequested();
             var cnpjStr = cert.ExtractCnpj();
@@ -313,9 +404,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
 
     private void ClearCertificates()
     {
-        Certificates.Clear();
+        foreach (var certificate in GetVisibleCertificates().ToList())
+            Certificates.Remove(certificate);
         CertificatesView.Refresh();
         OnPropertyChanged(nameof(VisibleCertificateCount));
+        OnPropertyChanged(nameof(EmptyStateMessage));
+        OnPropertyChanged(nameof(HasSelectedCertificates));
+        OnPropertyChanged(nameof(CanStartSync));
         AddLog("Lista de certificados limpa.", LogLevel.Info);
     }
 
@@ -359,20 +454,57 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
 
     private bool CanResetNsu()
     {
-        return Certificates.Any(c => c.Selected);
+        return !IsSimulationMode && GetVisibleCertificates().Any(c => c.Selected);
     }
 
     private bool CanAnalyzeGaps()
     {
-        return Certificates.Any(c => c.Selected);
+        return GetVisibleCertificates().Any(c => c.Selected);
     }
 
     private bool CanRecoverGaps()
     {
-        return Certificates.Any(c => c.Selected);
+        return GetVisibleCertificates().Any(c => c.Selected);
     }
 
-    public bool CanStartSync => Certificates.Any(c => c.Selected && c.HasPassword && c.HasPrivateKey && c.IsValidCertificate());
+    public bool CanStartSync
+    {
+        get
+        {
+            if (IsBusy || IsSyncing)
+                return false;
+            var selected = GetVisibleCertificates().Where(c => c.Selected).ToList();
+            return selected.Count > 0 &&
+                   (IsSimulationMode ||
+                    selected.All(c =>
+                        c.HasPassword &&
+                        c.HasPrivateKey &&
+                        c.IsValidCertificate() &&
+                        Cnpj.TryParse(c.ExtractCnpj(), out _)));
+        }
+    }
+
+    public string CanStartSyncReason
+    {
+        get
+        {
+            var selected = GetVisibleCertificates().Where(c => c.Selected).ToList();
+            if (selected.Count == 0)
+                return "Selecione ao menos uma empresa para iniciar.";
+            if (IsSimulationMode)
+                return "Execucao local com dados sinteticos; nenhuma chamada de rede sera realizada.";
+            var missingPassword = selected.Any(c => !c.HasPassword);
+            if (missingPassword)
+                return "Informe a senha dos certificados selecionados.";
+            if (selected.Any(c => !c.HasPrivateKey || !c.IsValidCertificate()))
+                return "Um ou mais certificados nao possuem chave privada valida ou estao expirados.";
+            if (selected.Any(c => !Cnpj.TryParse(c.ExtractCnpj(), out _)))
+                return "Nao foi possivel identificar um CNPJ valido em um ou mais certificados.";
+            if (string.IsNullOrWhiteSpace(CertificateFolder) || !Directory.Exists(CertificateFolder))
+                return "Escolha uma pasta valida e carregue os certificados.";
+            return string.Empty;
+        }
+    }
 
     private async Task StartSyncAsync()
     {
@@ -384,10 +516,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         _syncCancellation = new CancellationTokenSource();
 
         IsSyncing = true;
-        _totalEmpresas = Certificates.Count(c => c.Selected);
+        var selectedCertificates = GetVisibleCertificates().Where(c => c.Selected).ToList();
+        _totalEmpresas = selectedCertificates.Count;
         _empresasProcessadas = 0;
         _totalDocumentos = 0;
         _totalErros = 0;
+        _lastExecutionRecords = [];
+        _syncStartedAt = DateTimeOffset.Now;
         _currentCnpj = string.Empty;
         _currentNsu = string.Empty;
         LogMessages.Clear();
@@ -396,32 +531,99 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         OnPropertyChanged(nameof(TotalXmlGravados));
         OnPropertyChanged(nameof(TotalErros));
 
+        StatusMessage = IsSimulationMode
+            ? "Simulacao em andamento."
+            : "Sincronizacao em andamento.";
         AddLog($"Iniciando sincronizacao de {_totalEmpresas} empresa(s)...", LogLevel.Info);
 
         try
         {
+            if (IsSimulationMode)
+            {
+                var companies = selectedCertificates
+                    .Select(c => new SimulationCompany(c.Subject, Cnpj.Parse(c.ExtractCnpj())))
+                    .ToList();
+                var simulationResult = await _simularCarteira.Value.ExecuteAsync(
+                    companies,
+                    SimulationFailureEnabled,
+                    _syncCancellation.Token);
+                _lastExecutionRecords = simulationResult.Companies
+                    .Select(result => new ExecutionRecord(
+                        result.Company.Cnpj,
+                        result.Company.Name,
+                        result.InitialNsu,
+                        result.FinalNsu,
+                        result.DocumentsProcessed,
+                        result.Errors,
+                        result.FinishedAt - result.StartedAt,
+                        result.StartedAt,
+                        result.FinishedAt,
+                        result.Errors == 0 ? "Simulacao concluida" : "Simulacao com erros"))
+                    .ToList();
+                StatusMessage = $"Simulacao concluida: {_totalDocumentos} XML simulado(s), {_totalErros} erro(s). Saida isolada em {simulationResult.OutputFolder}.";
+                AddLog(
+                    $"[TESTE] Lote local concluido: {_totalDocumentos} XML simulado(s), {_totalErros} erro(s).",
+                    _totalErros == 0 ? LogLevel.Success : LogLevel.Error);
+                return;
+            }
+
             var empresas = BuildEmpresasFromCertificates();
             var result = await _sincronizarCarteira.Value.ExecuteAsync(
                 empresas,
                 GetCertificateAsync,
                 false,
                 _syncCancellation.Token);
+            var completedAt = DateTimeOffset.Now;
+            _empresasProcessadas = result.Resultados.Count;
+            _totalDocumentos = result.TotalDocumentos;
+            _totalErros = result.TotalErros;
+            OnPropertyChanged(nameof(EmpresasProcessadas));
+            OnPropertyChanged(nameof(TotalEmpresas));
+            OnPropertyChanged(nameof(TotalXmlGravados));
+            OnPropertyChanged(nameof(TotalErros));
+            OnPropertyChanged(nameof(SyncProgressText));
+            _lastExecutionRecords = result.Resultados
+                .Select(item =>
+                {
+                    var certificate = selectedCertificates.FirstOrDefault(c =>
+                        Cnpj.TryParse(c.ExtractCnpj(), out var cnpj) && cnpj == item.Cnpj);
+                    var initialNsu = certificate is not null &&
+                                     long.TryParse(certificate.UltimoNsu, out var parsedNsu)
+                        ? new Nsu(parsedNsu)
+                        : Nsu.Zero;
+                    return new ExecutionRecord(
+                        item.Cnpj,
+                        certificate?.Subject ?? item.Cnpj.Format(),
+                        initialNsu,
+                        item.UltimoNsu,
+                        item.DocumentosProcessados,
+                        item.Erros,
+                        completedAt - _syncStartedAt,
+                        _syncStartedAt,
+                        completedAt,
+                        item.Sucesso ? "Sucesso" : item.Erro ?? "Falha");
+                })
+                .ToList();
 
             if (result.Falhas == 0)
             {
+                StatusMessage = $"Sincronizacao concluida: {result.TotalDocumentos} documento(s), sem erros.";
                 AddLog($"Sincronizacao concluida: {result.Sucessos} sucesso(s), {result.TotalDocumentos} documento(s) processados.", LogLevel.Success);
             }
             else
             {
+                StatusMessage = $"Sincronizacao concluida com {result.Falhas} falha(s) e {result.TotalErros} erro(s).";
                 AddLog($"Sincronizacao concluida com falhas: {result.Falhas} falha(s), {result.TotalErros} erro(s).", LogLevel.Error);
             }
         }
         catch (OperationCanceledException)
         {
+            StatusMessage = "Operacao cancelada.";
             AddLog("Sincronizacao cancelada pelo usuario.", LogLevel.Warning);
         }
         catch (Exception ex)
         {
+            StatusMessage = "Falha durante a operacao.";
             AddLog($"Erro durante sincronizacao: {ex.Message}", LogLevel.Error);
         }
         finally
@@ -437,6 +639,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
 
     private bool ValidateBeforeSync()
     {
+        if (IsSimulationMode)
+        {
+            if (!GetVisibleCertificates().Any(c => c.Selected))
+            {
+                AddLog("Selecione ao menos uma empresa para a simulacao.", LogLevel.Error);
+                return false;
+            }
+            return true;
+        }
+
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(CertificateFolder) || !Directory.Exists(CertificateFolder))
             errors.Add("A pasta de certificados nao existe.");
@@ -445,7 +657,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         if (!Enum.TryParse<FolderStructure>(SelectedFolderStructure, out _))
             errors.Add("A estrutura de pastas e invalida.");
 
-        var selectedCerts = Certificates.Where(c => c.Selected).ToList();
+        var selectedCerts = GetVisibleCertificates().Where(c => c.Selected).ToList();
         if (selectedCerts.Count == 0)
             errors.Add("Nenhum certificado foi selecionado.");
         else
@@ -458,6 +670,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
                     errors.Add($"Certificado {cert.FileName} nao possui chave privada.");
                 if (!cert.IsValidCertificate())
                     errors.Add($"Certificado {cert.FileName} invalido ou expirado.");
+                if (!Cnpj.TryParse(cert.ExtractCnpj(), out _))
+                    errors.Add($"CNPJ nao identificado ou invalido no certificado {cert.FileName}.");
             }
         }
 
@@ -479,7 +693,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
     private IReadOnlyList<Empresa> BuildEmpresasFromCertificates()
     {
         var empresas = new List<Empresa>();
-        foreach (var cert in Certificates.Where(c => c.Selected))
+        foreach (var cert in GetVisibleCertificates().Where(c => c.Selected))
         {
             if (Cnpj.TryParse(cert.ExtractCnpj(), out var cnpj))
             {
@@ -503,10 +717,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         return await _loadCertificate.ExecuteAsync(empresa.CertificadoArquivo, certRow.Password, _syncCancellation!.Token);
     }
 
-    private async Task CancelSyncAsync()
+    private Task CancelSyncAsync()
     {
-        _syncCancellation?.Cancel();
-        AddLog("Cancelamento solicitado... aguardando finalizacao da operacao atual.", LogLevel.Warning);
+        if (IsSyncing)
+            _syncCancellation?.Cancel();
+        else if (_operationCancellation is not null)
+            _operationCancellation.Cancel();
+        else
+            _discoveryCancellation?.Cancel();
+        StatusMessage = "Cancelamento solicitado...";
+        AddLog("Cancelamento solicitado. A operacao atual sera interrompida com seguranca.", LogLevel.Warning);
+        return Task.CompletedTask;
     }
 
     private async Task ResetNsuAsync()
@@ -514,7 +735,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         if (!CanResetNsu())
             return;
 
-        var selected = Certificates.Where(c => c.Selected).ToList();
+        var selected = GetVisibleCertificates().Where(c => c.Selected).ToList();
 
         if (!_resetNsuConfirmed)
         {
@@ -524,28 +745,55 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         }
 
         _resetNsuConfirmed = false;
-        
+        IsBusy = true;
+        _operationCancellation?.Cancel();
+        _operationCancellation?.Dispose();
+        _operationCancellation = new CancellationTokenSource();
+        var cancellationToken = _operationCancellation.Token;
+
+        var companies = new List<Empresa>();
         foreach (var cert in selected)
         {
             if (Cnpj.TryParse(cert.ExtractCnpj(), out var cnpj))
             {
-                try
-                {
-                    await _sincronizarCarteira.Value.ExecuteAsync(
-                        [Empresa.Create(cnpj, cert.Subject, cert.FilePath)],
-                        _ => Task.FromResult<X509Certificate2?>(null),
-                        true,
-                        CancellationToken.None);
-                    AddLog($"NSU resetado para {cert.Subject} ({cnpj.Format()})", LogLevel.Success);
-                }
-                catch (Exception ex)
-                {
-                    AddLog($"Erro ao resetar NSU para {cert.Subject}: {ex.Message}", LogLevel.Error);
-                }
+                var company = Empresa.Create(cnpj, cert.Subject, cert.FilePath);
+                company.Selecionar();
+                companies.Add(company);
             }
         }
-        
-        AddLog("Reset de NSU concluido.", LogLevel.Info);
+
+        try
+        {
+            var result = await _resetNsuUseCase.Value.ExecuteAsync(companies, cancellationToken);
+            foreach (var cert in selected)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (Cnpj.TryParse(cert.ExtractCnpj(), out var cnpj))
+                {
+                    var state = await _nsuRepository.GetAsync(cnpj, cancellationToken);
+                    cert.UltimoNsu = state?.UltimoNsuConfirmado.Value.ToString() ?? "0";
+                }
+            }
+
+            StatusMessage = $"Reset de NSU concluido: {result.Sucessos} sucesso(s), {result.Falhas} falha(s).";
+            AddLog(StatusMessage, result.Falhas > 0 ? LogLevel.Error : LogLevel.Success);
+        }
+        catch (OperationCanceledException)
+        {
+            StatusMessage = "Reset de NSU cancelado.";
+            AddLog(StatusMessage, LogLevel.Warning);
+        }
+        catch (Exception exception)
+        {
+            StatusMessage = "Falha ao resetar o NSU.";
+            AddLog($"Erro ao resetar NSU: {exception.Message}", LogLevel.Error);
+        }
+        finally
+        {
+            _operationCancellation?.Dispose();
+            _operationCancellation = null;
+            IsBusy = false;
+        }
     }
 
     private async Task AnalyzeGapsAsync()
@@ -553,16 +801,31 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         if (!CanAnalyzeGaps())
             return;
 
-        var selected = Certificates.Where(c => c.Selected).ToList();
+        var selected = GetVisibleCertificates().Where(c => c.Selected).ToList();
+        _operationCancellation?.Cancel();
+        _operationCancellation?.Dispose();
+        _operationCancellation = new CancellationTokenSource();
+        var cancellationToken = _operationCancellation.Token;
+        IsBusy = true;
         AddLog($"Iniciando analise de lacunas para {selected.Count} empresa(s)...", LogLevel.Info);
 
         try
         {
+            if (IsSimulationMode)
+            {
+                foreach (var certificate in selected)
+                    AddLog($"[TESTE] Empresa {certificate.Subject}: 2 lacuna(s) em 1 intervalo (NSU 2 a 3).", LogLevel.Warning);
+                StatusMessage = "Analise simulada de lacunas concluida.";
+                AddLog("[TESTE] Analise de lacunas concluida sem consultar a API.", LogLevel.Success);
+                return;
+            }
+
             foreach (var cert in selected)
             {
                 if (Cnpj.TryParse(cert.ExtractCnpj(), out var cnpj))
                 {
-                    var result = await _gapAnalyzer.AnalyzeAsync(cnpj, _syncCancellation!.Token);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var result = await _gapAnalyzer.AnalyzeAsync(cnpj, cancellationToken);
                     AddLog($"Empresa {cert.Subject} ({cnpj.Format()}): {result.TotalLacunas} lacuna(s) em {result.Intervalos.Count} intervalo(s)", 
                         result.TotalLacunas > 0 ? LogLevel.Warning : LogLevel.Success);
                     
@@ -572,15 +835,24 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
                     }
                 }
             }
+            StatusMessage = "Analise de lacunas concluida.";
             AddLog("Analise de lacunas concluida.", LogLevel.Success);
         }
         catch (OperationCanceledException)
         {
+            StatusMessage = "Analise de lacunas cancelada.";
             AddLog("Analise de lacunas cancelada.", LogLevel.Warning);
         }
         catch (Exception ex)
         {
+            StatusMessage = "Falha durante a analise de lacunas.";
             AddLog($"Erro durante analise de lacunas: {ex.Message}", LogLevel.Error);
+        }
+        finally
+        {
+            _operationCancellation?.Dispose();
+            _operationCancellation = null;
+            IsBusy = false;
         }
     }
 
@@ -589,34 +861,20 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         if (!CanRecoverGaps())
             return;
 
-        var selected = Certificates.Where(c => c.Selected).ToList();
-        
-        // Primeiro analisar para obter as lacunas
-        var allNsus = new List<Nsu>();
-        
-        foreach (var cert in selected)
+        var selected = GetVisibleCertificates().Where(c => c.Selected).ToList();
+        if (IsSimulationMode)
         {
-            if (Cnpj.TryParse(cert.ExtractCnpj(), out var cnpj))
-            {
-                var result = await _gapAnalyzer.AnalyzeAsync(cnpj, _syncCancellation!.Token);
-                foreach (var intervalo in result.Intervalos)
-                {
-                    for (var nsu = intervalo.Inicio; nsu <= intervalo.Fim; nsu = new Nsu(nsu.Value + 1))
-                    {
-                        allNsus.Add(nsu);
-                    }
-                }
-            }
-        }
-
-        if (allNsus.Count == 0)
-        {
-            AddLog("Nenhuma lacuna encontrada para recuperar.", LogLevel.Info);
+            StatusMessage = "Recuperacao simulada concluida: 2 NSUs de teste por empresa.";
+            foreach (var certificate in selected)
+                AddLog($"[TESTE] Empresa {certificate.Subject}: 2 NSUs simulados recuperados.", LogLevel.Success);
             return;
         }
 
-        AddLog($"Iniciando recuperacao de {allNsus.Count} NSU(s) em {selected.Count} empresa(s)...", LogLevel.Info);
-
+        IsBusy = true;
+        _operationCancellation?.Cancel();
+        _operationCancellation?.Dispose();
+        _operationCancellation = new CancellationTokenSource();
+        var cancellationToken = _operationCancellation.Token;
         try
         {
             var totalRecuperados = 0;
@@ -624,36 +882,68 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
 
             foreach (var cert in selected)
             {
-                if (Cnpj.TryParse(cert.ExtractCnpj(), out var cnpj))
-                {
-                    var empresaNsus = allNsus.Where(n => true).ToList(); // All NSUs for this company
-                    var result = await _gapAnalyzer.RecoverAsync(cnpj, empresaNsus, _syncCancellation!.Token);
-                    totalRecuperados += result.Recuperados;
-                    totalFalhas += result.Falhas;
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!Cnpj.TryParse(cert.ExtractCnpj(), out var cnpj))
+                    continue;
 
-                    AddLog($"Empresa {cert.Subject} ({cnpj.Format()}): {result.Recuperados} recuperado(s), {result.Falhas} falha(s)", 
-                        result.Falhas > 0 ? LogLevel.Error : LogLevel.Success);
-                    
-                    foreach (var nsuErro in result.NsuComErro)
-                        AddLog($"  Falha NSU {nsuErro}", LogLevel.Error);
+                var analysis = await _gapAnalyzer.AnalyzeAsync(cnpj, cancellationToken);
+                var companyNsus = analysis.Intervalos
+                    .SelectMany(interval =>
+                    {
+                        var nsus = new List<Nsu>();
+                        for (var nsu = interval.Inicio; nsu <= interval.Fim; nsu = new Nsu(nsu.Value + 1))
+                            nsus.Add(nsu);
+                        return nsus;
+                    })
+                    .ToList();
+
+                if (companyNsus.Count == 0)
+                {
+                    AddLog($"Empresa {cert.Subject}: nenhuma lacuna encontrada.", LogLevel.Info);
+                    continue;
                 }
+
+                var result = await _gapAnalyzer.RecoverAsync(cnpj, companyNsus, cancellationToken);
+                totalRecuperados += result.Recuperados;
+                totalFalhas += result.Falhas;
+                AddLog(
+                    $"Empresa {cert.Subject} ({cnpj.Format()}): {result.Recuperados} recuperado(s), {result.Falhas} falha(s)",
+                    result.Falhas > 0 ? LogLevel.Error : LogLevel.Success);
+
+                foreach (var nsuErro in result.NsuComErro)
+                    AddLog($"Falha no NSU {nsuErro}", LogLevel.Error);
             }
 
-            AddLog($"Recuperacao concluida: {totalRecuperados} recuperado(s), {totalFalhas} falha(s)", 
-                totalFalhas > 0 ? LogLevel.Error : LogLevel.Success);
+            StatusMessage = $"Recuperacao concluida: {totalRecuperados} recuperado(s), {totalFalhas} falha(s).";
+            AddLog(StatusMessage, totalFalhas > 0 ? LogLevel.Error : LogLevel.Success);
         }
         catch (OperationCanceledException)
         {
-            AddLog("Recuperacao cancelada.", LogLevel.Warning);
+            StatusMessage = "Recuperacao de lacunas cancelada.";
+            AddLog(StatusMessage, LogLevel.Warning);
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            AddLog($"Erro durante recuperacao: {ex.Message}", LogLevel.Error);
+            StatusMessage = "Falha durante a recuperacao de lacunas.";
+            AddLog($"Erro durante recuperacao: {exception.Message}", LogLevel.Error);
+        }
+        finally
+        {
+            _operationCancellation?.Dispose();
+            _operationCancellation = null;
+            IsBusy = false;
         }
     }
 
     private async Task ExportExecutionAsync()
     {
+        if (_lastExecutionRecords.Count == 0)
+        {
+            StatusMessage = "Ainda nao ha uma execucao para exportar.";
+            AddLog(StatusMessage, LogLevel.Warning);
+            return;
+        }
+
         AddLog("Exportando relatorio de execucao...", LogLevel.Info);
 
         try
@@ -668,30 +958,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
 
             if (dialog.ShowDialog() == true)
             {
-                // Build execution records from current session
-                var records = new List<ExecutionRecord>
-                {
-                    new ExecutionRecord(
-                        Cnpj: Cnpj.Parse("00000000000000"), // Placeholder
-                        Empresa: "Resumo da Sessao",
-                        NsuInicial: Nsu.Zero,
-                        NsuFinal: new Nsu(_totalDocumentos),
-                        DocumentosProcessados: _totalDocumentos,
-                        Erros: _totalErros,
-                        Duracao: TimeSpan.Zero, // Could track actual duration
-                        Inicio: DateTimeOffset.Now.AddMinutes(-5), // Placeholder
-                        Fim: DateTimeOffset.Now,
-                        Status: _totalErros == 0 ? "Sucesso" : "Com Erros"
-                    )
-                };
-
-                var bytes = await _excelExporter.ExportExecutionAsync(records, CancellationToken.None);
+                var bytes = await _excelExporter.ExportExecutionAsync(_lastExecutionRecords, CancellationToken.None);
                 await File.WriteAllBytesAsync(dialog.FileName, bytes);
+                StatusMessage = "Relatorio Excel exportado.";
                 AddLog($"Relatorio de execucao exportado para: {dialog.FileName}", LogLevel.Success);
             }
         }
         catch (Exception ex)
         {
+            StatusMessage = "Falha ao exportar o relatorio Excel.";
             AddLog($"Erro ao exportar relatorio de execucao: {ex.Message}", LogLevel.Error);
         }
     }
@@ -737,13 +1012,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
 
     private async Task IndexReceivedDocumentsAsync()
     {
+        _operationCancellation?.Cancel();
+        _operationCancellation?.Dispose();
+        _operationCancellation = new CancellationTokenSource();
+        var cancellationToken = _operationCancellation.Token;
         IsBusy = true;
         StatusMessage = "Indexando documentos fiscais existentes...";
 
         try
         {
             var result = await Task.Run(
-                () => _receivedDocumentIndexer.IndexAsync(DestinationFolder, CancellationToken.None));
+                () => _receivedDocumentIndexer.IndexAsync(DestinationFolder, cancellationToken),
+                cancellationToken);
             AddLog(
                 $"Indexacao concluida: {result.Indexed} novo(s), {result.Skipped} ignorado(s), {result.Errors.Count} erro(s).",
                 result.Errors.Count > 0 ? LogLevel.Warning : LogLevel.Success);
@@ -755,6 +1035,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
                 ? "Indexacao concluida."
                 : $"Indexacao concluida com {result.Errors.Count} erro(s).";
         }
+        catch (OperationCanceledException)
+        {
+            StatusMessage = "Indexacao cancelada.";
+            AddLog(StatusMessage, LogLevel.Warning);
+        }
         catch (Exception ex)
         {
             StatusMessage = "Falha ao indexar documentos existentes.";
@@ -762,6 +1047,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         }
         finally
         {
+            _operationCancellation?.Dispose();
+            _operationCancellation = null;
             IsBusy = false;
         }
     }
@@ -773,20 +1060,82 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
             SetDestinationFolder(dialog.FolderName);
     }
 
-    private void ChooseCertificateFolder()
+    private async Task ChooseCertificateFolderAsync()
     {
         var dialog = new Microsoft.Win32.OpenFolderDialog { Title = "Escolher pasta de certificados" };
         if (dialog.ShowDialog() == true)
+        {
             SetCertificateFolder(dialog.FolderName);
+            await DiscoverCertificatesAsync();
+        }
     }
 
     private bool FilterCertificate(object item)
     {
-        if (item is not CertificateRowViewModel certificate || string.IsNullOrWhiteSpace(SearchText))
+        if (item is not CertificateRowViewModel certificate || certificate.IsSimulation != IsSimulationMode)
+            return false;
+        if (string.IsNullOrWhiteSpace(SearchText))
             return true;
         return certificate.FileName.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+               certificate.FilePath.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
                certificate.Subject.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+               certificate.Cnpj.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
                certificate.Thumbprint.Contains(SearchText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private IEnumerable<CertificateRowViewModel> GetVisibleCertificates() =>
+        Certificates.Where(c => c.IsSimulation == IsSimulationMode);
+
+    private void ToggleSimulationMode()
+    {
+        if (!IsSimulationMode)
+            EnsureSimulationCompanies();
+
+        IsSimulationMode = !IsSimulationMode;
+        SimulationFailureEnabled = false;
+        StatusMessage = IsSimulationMode
+            ? "Simulacao local ativa. Nenhuma API ou certificado sera utilizado."
+            : "Modo normal ativo. A sincronizacao exige certificados validos.";
+        AddLog(
+            IsSimulationMode
+                ? "Modo Simulacao (TESTE) ativado. Os dados sao sinteticos e a execucao sera offline."
+                : "Modo Simulacao desativado.",
+            LogLevel.Info);
+    }
+
+    private void EnsureSimulationCompanies()
+    {
+        if (Certificates.Any(c => c.IsSimulation))
+            return;
+
+        AddCertificateRow(CertificateRowViewModel.CreateSimulation(
+            "Empresa Simulada Alfa",
+            "11222333000181"));
+        AddCertificateRow(CertificateRowViewModel.CreateSimulation(
+            "Empresa Simulada Beta",
+            "11222333000262"));
+    }
+
+    private void AddCertificateRow(CertificateRowViewModel row)
+    {
+        row.PropertyChanged += OnCertificateRowPropertyChanged;
+        Certificates.Add(row);
+    }
+
+    private void OnCertificateRowPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(CertificateRowViewModel.Selected) or nameof(CertificateRowViewModel.HasPassword))
+        {
+            OnPropertyChanged(nameof(HasSelectedCertificates));
+            OnPropertyChanged(nameof(CanStartSync));
+            OnPropertyChanged(nameof(CanStartSyncReason));
+            StartSyncCommand.RaiseCanExecuteChanged();
+            SelectAllCommand.RaiseCanExecuteChanged();
+            ClearSelectionCommand.RaiseCanExecuteChanged();
+            AnalyzeGapsCommand.RaiseCanExecuteChanged();
+            RecoverGapsCommand.RaiseCanExecuteChanged();
+            ResetNsuCommand.RaiseCanExecuteChanged();
+        }
     }
 
     private void ApplyEnvironment(EnvironmentType environment)
@@ -795,6 +1144,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         {
             _environment.SetEnvironment(environment);
             OnPropertyChanged(nameof(ActiveEnvironmentLabel));
+            OnPropertyChanged(nameof(EnvironmentDescription));
             AddLog(environment == EnvironmentType.Producao
                 ? "Producao selecionada. Confirme o ambiente antes de qualquer operacao fiscal."
                 : "Ambiente de producao restrita selecionado.",
@@ -813,15 +1163,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         _selectedEnvironment = environment.ToString();
         OnPropertyChanged(nameof(SelectedEnvironment));
         OnPropertyChanged(nameof(ActiveEnvironmentLabel));
+        OnPropertyChanged(nameof(EnvironmentDescription));
     }
 
     public void ReportEmpresaStart(Cnpj cnpj, Nsu nsuInicial)
     {
         _currentCnpj = cnpj.Format();
         _currentNsu = nsuInicial.ToString();
-        _empresasProcessadas++;
         OnPropertyChanged(nameof(SyncProgressText));
-        OnPropertyChanged(nameof(EmpresasProcessadas));
         AddLog($"Processando {cnpj.Format()} (NSU inicial: {nsuInicial})", LogLevel.Info);
     }
 
@@ -835,20 +1184,27 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
 
     public void ReportEmpresaComplete(Cnpj cnpj, int documentosProcessados, int erros)
     {
+        _empresasProcessadas++;
         _totalErros += erros;
         OnPropertyChanged(nameof(TotalErros));
+        OnPropertyChanged(nameof(EmpresasProcessadas));
+        OnPropertyChanged(nameof(SyncProgressText));
         AddLog($"Concluido {cnpj.Format()}: {documentosProcessados} docs, {erros} erros", erros > 0 ? LogLevel.Error : LogLevel.Success);
     }
 
     public void ReportEmpresaError(Cnpj cnpj, Exception erro)
     {
+        _empresasProcessadas++;
         _totalErros++;
         OnPropertyChanged(nameof(TotalErros));
+        OnPropertyChanged(nameof(EmpresasProcessadas));
+        OnPropertyChanged(nameof(SyncProgressText));
         AddLog($"Erro em {cnpj.Format()}: {erro.Message}", LogLevel.Error);
     }
 
     public void ReportProgress(string mensagem)
     {
+        StatusMessage = mensagem;
         AddLog(mensagem, LogLevel.Info);
     }
 
@@ -895,8 +1251,28 @@ public sealed class CertificateRowViewModel : INotifyPropertyChanged
         ValidUntil = certificate.NotAfter;
         HasPrivateKey = certificate.HasPrivateKey;
         Status = certificate.HasPrivateKey ? "Disponivel" : "Sem chave privada";
+        Detail = certificate.ErrorMessage ?? string.Empty;
+        IsSimulation = false;
         UltimoNsu = "0";
     }
+
+    private CertificateRowViewModel(string companyName, string cnpj)
+    {
+        FilePath = $"simulacao://certificado-{cnpj}.pfx";
+        FileName = $"certificado-simulado-{cnpj}.pfx";
+        Subject = $"{companyName}, CNPJ={cnpj}";
+        Issuer = "NEO-e - dados sinteticos";
+        Thumbprint = $"TESTE-{cnpj}";
+        ValidUntil = null;
+        HasPrivateKey = false;
+        Status = "TESTE - certificado ficticio";
+        Detail = "Sem certificado ou conexao externa.";
+        IsSimulation = true;
+        UltimoNsu = "0";
+    }
+
+    public static CertificateRowViewModel CreateSimulation(string companyName, string cnpj) =>
+        new(companyName, cnpj);
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -908,6 +1284,8 @@ public sealed class CertificateRowViewModel : INotifyPropertyChanged
     public DateTimeOffset? ValidUntil { get; }
     public bool HasPrivateKey { get; }
     public string Status { get; }
+    public string Detail { get; }
+    public bool IsSimulation { get; }
 
     public string UltimoNsu
     {

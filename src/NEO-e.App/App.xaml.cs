@@ -47,8 +47,10 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<LoadCertificateUseCase>();
                     services.AddSingleton<SincronizarEmpresaUseCase>();
                     services.AddSingleton<SincronizarCarteiraUseCase>();
+                    services.AddSingleton<SimularCarteiraUseCase>();
 
                     services.AddSingleton(sp => new Lazy<SincronizarCarteiraUseCase>(() => sp.GetRequiredService<SincronizarCarteiraUseCase>()));
+                    services.AddSingleton(sp => new Lazy<SimularCarteiraUseCase>(() => sp.GetRequiredService<SimularCarteiraUseCase>()));
                     services.AddSingleton(sp => new Lazy<ResetNsuUseCase>(() => sp.GetRequiredService<ResetNsuUseCase>()));
 
                     services.AddSingleton<MainWindowViewModel>();

@@ -20,6 +20,7 @@ Documentos principais:
 - [RFC Projeto.md](RFC%20Projeto.md): proposta inicial do produto.
 - [RFC-001-Download-Massa-NFSe.md](RFC-001-Download-Massa-NFSe.md): download em massa de NFS-e.
 - [RFC-002-Manifestacao-Cruzamento-Valores.md](RFC-002-Manifestacao-Cruzamento-Valores.md): manifestacao e cruzamento de valores.
+- [RFC-003-modo-simulacao-e-fluxo-lote.md](docs/RFC-003-modo-simulacao-e-fluxo-lote.md): modo simulado e melhoria da interface de lote.
 - [TASKS-001-Implementacao-NFSe-WPF.md](TASKS-001-Implementacao-NFSe-WPF.md): backlog do RFC-001.
 - [TASKS-002-Manifestacao-Cruzamento.md](tasks/TASKS-002-Manifestacao-Cruzamento.md): backlog do RFC-002.
 
