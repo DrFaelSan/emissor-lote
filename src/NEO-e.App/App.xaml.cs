@@ -19,6 +19,8 @@ public partial class App : System.Windows.Application
     {
         base.OnStartup(e);
 
+        ShutdownMode = ShutdownMode.OnMainWindowClose;
+
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
@@ -46,6 +48,9 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<SincronizarEmpresaUseCase>();
                     services.AddSingleton<SincronizarCarteiraUseCase>();
 
+                    services.AddSingleton(sp => new Lazy<SincronizarCarteiraUseCase>(() => sp.GetRequiredService<SincronizarCarteiraUseCase>()));
+                    services.AddSingleton(sp => new Lazy<ResetNsuUseCase>(() => sp.GetRequiredService<ResetNsuUseCase>()));
+
                     services.AddSingleton<MainWindowViewModel>();
                     services.AddSingleton<IProgressReporter>(sp => sp.GetRequiredService<MainWindowViewModel>());
                     services.AddSingleton<MainWindow>();
@@ -56,11 +61,12 @@ public partial class App : System.Windows.Application
             logger.LogInformation("Sistema NEO-e iniciando... Ambiente base: {BaseDirectory}", AppContext.BaseDirectory);
             logger.LogInformation("Arquivo de configuracao carregado em {ConfigPath}", Path.Combine(AppContext.BaseDirectory, "appsettings.json"));
 
+            await _host.StartAsync();
+
             var mainWindow = _host.Services.GetRequiredService<MainWindow>();
             MainWindow = mainWindow;
             mainWindow.Show();
 
-            await _host.StartAsync();
             logger.LogInformation("MainWindow exibida com sucesso.");
         }
         catch (Exception ex)

@@ -108,7 +108,7 @@
                     <TextBlock Grid.Column="0" Text="Progresso:" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"/>
                     <TextBlock Grid.Column="1" Text="{Binding SyncProgressText}" VerticalAlignment="Center" TextWrapping="Wrap"/>
                     <ProgressBar Grid.Column="2" Width="200" Height="20" 
-                                 Minimum="0" Maximum="{Binding TotalEmpresas}" Value="{Binding EmpresasProcessadas}"
+                                 Minimum="0" Maximum="{Binding TotalEmpresas}" Value="{Binding EmpresasProcessadas, Mode=OneWay}"
                                  Visibility="{Binding IsSyncing, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                 </Grid>
                 
@@ -132,13 +132,7 @@
         <!-- 4. Ações de Lacunas, Recuperação e Exportação -->
         <Border Grid.Row="3" Background="{StaticResource SurfaceBrush}" Padding="15" CornerRadius="5" Margin="0,15,0,0" Visibility="{Binding HasSelectedCertificates, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="Ferramentas:" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"/>
                     <Button Content="Analisar Lacunas" Command="{Binding AnalyzeGapsCommand}" 
                             Background="Transparent" Foreground="{StaticResource TextSecondaryBrush}" 
@@ -160,19 +154,6 @@
                             Background="Transparent" Foreground="{StaticResource TextSecondaryBrush}"
                             BorderThickness="1" BorderBrush="{StaticResource TextSecondaryBrush}" Margin="0,0,10,0"
                             ToolTip="Varre os XMLs da pasta de destino e indexa os documentos recebidos"/>
-                </StackPanel>
-
-                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="Baixar desde o início" Command="{Binding ResetNsuCommand}" 
-                            Background="Transparent" Foreground="{StaticResource TextSecondaryBrush}" 
-                            BorderThickness="1" BorderBrush="{StaticResource TextSecondaryBrush}" Margin="0,0,10,0"
-                            ToolTip="Requer confirmação em duas etapas"/>
-                            
-                    <Button Content="Parar" Command="{Binding CancelSyncCommand}" Background="DarkRed" Margin="0,0,10,0" 
-                            Visibility="{Binding IsSyncing, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                            
-                    <Button Content="Baixar (XML)" Command="{Binding StartSyncCommand}" Padding="30,10"
-                            IsEnabled="{Binding CanStartSync}"/>
                 </StackPanel>
             </Grid>
         </Border>

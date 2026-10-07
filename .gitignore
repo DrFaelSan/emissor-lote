@@ -131,3 +131,16 @@ $RECYCLE.BIN/
 .DS_Store
 
 _NCrunch*
+
+# =========================
+# Certificados e segredos
+# =========================
+
+*.pfx
+*.p12
+*.snk
+*.cer
+*.crt
+*.key
+*.pem
+*.csr

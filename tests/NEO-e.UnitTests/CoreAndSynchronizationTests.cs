@@ -12,6 +12,7 @@ using NEO_e.Infrastructure.DependencyInjection;
 using NEO_e.Infrastructure.FileSystem;
 using NEO_e.Infrastructure.Parsers;
 using NEO_e.Infrastructure.Persistence;
+using System.Runtime.Versioning;
 using System.Xml.Linq;
 
 namespace NEO_e.UnitTests;
@@ -38,6 +39,7 @@ public sealed class CoreAndSynchronizationTests
     }
 
     [Fact]
+    [SupportedOSPlatform("windows")]
     public void Infrastructure_registers_application_logger_with_serilog_dependency()
     {
         var root = Path.Combine(Path.GetTempPath(), $"neo-e-{Guid.NewGuid():N}");

@@ -1,4 +1,5 @@
 using System.IO;
+using System.Runtime.Versioning;
 using System.Security.AccessControl;
 using System.Security.Cryptography;
 using System.Security.Principal;
@@ -7,6 +8,7 @@ using NEO_e.Application.Contracts;
 
 namespace NEO_e.Infrastructure.Security;
 
+[SupportedOSPlatform("windows")]
 public sealed class DpapiCredentialManager : ICredentialManager
 {
     private static readonly byte[] StaticEntropy = Encoding.UTF8.GetBytes("NEO-e.Crypto.v1");

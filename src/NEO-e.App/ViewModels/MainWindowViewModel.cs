@@ -20,8 +20,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
 {
     private readonly DiscoverCertificatesUseCase _discoverCertificates;
     private readonly LoadCertificateUseCase _loadCertificate;
-    private readonly SincronizarCarteiraUseCase _sincronizarCarteira;
-    private readonly ResetNsuUseCase _resetNsuUseCase;
+    private readonly Lazy<SincronizarCarteiraUseCase> _sincronizarCarteira;
+    private readonly Lazy<ResetNsuUseCase> _resetNsuUseCase;
     private readonly IGapAnalyzer _gapAnalyzer;
     private readonly IExcelExporter _excelExporter;
     private readonly INsuRepository _nsuRepository;
@@ -50,8 +50,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
     public MainWindowViewModel(
         DiscoverCertificatesUseCase discoverCertificates,
         LoadCertificateUseCase loadCertificate,
-        SincronizarCarteiraUseCase sincronizarCarteira,
-        ResetNsuUseCase resetNsuUseCase,
+        Lazy<SincronizarCarteiraUseCase> sincronizarCarteira,
+        Lazy<ResetNsuUseCase> resetNsuUseCase,
         IGapAnalyzer gapAnalyzer,
         IExcelExporter excelExporter,
         INsuRepository nsuRepository,
@@ -401,7 +401,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         try
         {
             var empresas = BuildEmpresasFromCertificates();
-            var result = await _sincronizarCarteira.ExecuteAsync(
+            var result = await _sincronizarCarteira.Value.ExecuteAsync(
                 empresas,
                 GetCertificateAsync,
                 false,
@@ -531,7 +531,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
             {
                 try
                 {
-                    await _sincronizarCarteira.ExecuteAsync(
+                    await _sincronizarCarteira.Value.ExecuteAsync(
                         [Empresa.Create(cnpj, cert.Subject, cert.FilePath)],
                         _ => Task.FromResult<X509Certificate2?>(null),
                         true,

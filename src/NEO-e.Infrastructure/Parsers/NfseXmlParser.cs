@@ -95,6 +95,20 @@ public sealed class NfseXmlParser : IXmlParser
                     return value;
             }
         }
+
+        foreach (var element in root.DescendantsAndSelf())
+        {
+            foreach (var attribute in element.Attributes())
+            {
+                if (names.Any(name => string.Equals(attribute.Name.LocalName, name, StringComparison.OrdinalIgnoreCase)))
+                {
+                    var value = attribute.Value.Trim();
+                    if (!string.IsNullOrWhiteSpace(value))
+                        return value;
+                }
+            }
+        }
+
         return null;
     }
 }

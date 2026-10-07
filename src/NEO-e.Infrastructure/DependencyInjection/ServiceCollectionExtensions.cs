@@ -13,11 +13,13 @@ using NEO_e.Infrastructure.FileSystem;
 using NEO_e.Infrastructure.Parsers;
 using NEO_e.Infrastructure.Export;
 using NEO_e.Infrastructure.Security;
+using System.Runtime.Versioning;
 
 namespace NEO_e.Infrastructure.DependencyInjection;
 
 public static class ServiceCollectionExtensions
 {
+    [SupportedOSPlatform("windows")]
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddSingleton<IConfiguration>(configuration);
@@ -101,7 +103,7 @@ public static class ServiceCollectionExtensions
 
             var logFilePath = string.IsNullOrWhiteSpace(logSettings.LogFilePath)
                 ? Path.Combine(AppContext.BaseDirectory, "logs", "app.log")
-                : logSettings.LogFilePath;
+                : Path.GetFullPath(logSettings.LogFilePath, AppContext.BaseDirectory);
 
             var logDirectory = Path.GetDirectoryName(logFilePath);
             if (!string.IsNullOrEmpty(logDirectory) && !Directory.Exists(logDirectory))

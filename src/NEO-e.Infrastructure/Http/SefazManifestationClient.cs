@@ -124,15 +124,12 @@ public sealed class SefazManifestationClient : IManifestationClient
             )
         );
 
-        // Assinar o infEvento com XMLDSIG
-        var signedInfEvento = SignXmlElement(infEventoElement, certificate, infEventoId);
-
         var eventoElement = new XElement(XName.Get("evento", ns),
             new XAttribute("versao", "1.00"),
-            signedInfEvento
+            infEventoElement
         );
 
-        return eventoElement;
+        return SignXmlElement(eventoElement, certificate, infEventoId);
     }
 
     private XElement BuildDetEventoContent(ManifestationEvent evento)
@@ -201,49 +198,35 @@ public sealed class SefazManifestationClient : IManifestationClient
         }
     }
 
-    private XElement SignXmlElement(XElement elementToSign, X509Certificate2 certificate, string elementId)
+    private XElement SignXmlElement(XElement container, X509Certificate2 certificate, string elementId)
     {
-        // Criar documento XML para assinatura
         var doc = new XmlDocument();
-        doc.LoadXml(elementToSign.ToString(SaveOptions.DisableFormatting));
+        doc.LoadXml(container.ToString(SaveOptions.DisableFormatting));
 
-        // Criar objeto SignedXml
         var signedXml = new SignedXml(doc);
         signedXml.SigningKey = certificate.GetRSAPrivateKey();
-        
+
         if (signedXml.SigningKey == null)
         {
             throw new InvalidOperationException("Certificado não possui chave privada RSA para assinatura");
         }
 
-        // Configurar referência para o elemento a ser assinado
         var reference = new Reference($"#{elementId}");
         reference.AddTransform(new XmlDsigEnvelopedSignatureTransform());
         reference.AddTransform(new XmlDsigC14NTransform());
         signedXml.AddReference(reference);
 
-        // Adicionar KeyInfo com o certificado
         var keyInfo = new KeyInfo();
         keyInfo.AddClause(new KeyInfoX509Data(certificate));
         signedXml.KeyInfo = keyInfo;
 
-        // Calcular assinatura
         signedXml.ComputeSignature();
 
-        // Obter a assinatura XML
-        var xmlSignature = signedXml.GetXml();
+        var documentElement = doc.DocumentElement
+            ?? throw new InvalidOperationException("XML sem elemento raiz para anexar a assinatura");
+        documentElement.AppendChild(doc.ImportNode(signedXml.GetXml(), true));
 
-        // Converter de volta para XElement
-        var docSigned = new XmlDocument();
-        docSigned.LoadXml(elementToSign.ToString(SaveOptions.DisableFormatting));
-        
-        // Importar a assinatura para o documento
-        var importedSignature = docSigned.ImportNode(xmlSignature, true);
-        var documentElement = docSigned.DocumentElement;
-        documentElement?.AppendChild(importedSignature);
-
-        // Converter de volta para XElement
-        using var stringReader = new StringReader(docSigned.OuterXml);
+        using var stringReader = new StringReader(doc.OuterXml);
         return XElement.Load(stringReader);
     }
 }
