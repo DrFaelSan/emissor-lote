@@ -28,7 +28,9 @@ public sealed record CertificateInfo(
     DateTimeOffset? NotBefore,
     DateTimeOffset? NotAfter,
     string? Thumbprint,
-    bool HasPrivateKey);
+    bool HasPrivateKey,
+    bool RequiresPassword = false,
+    string? ErrorMessage = null);
 
 public sealed record CertificateValidationResult(
     bool IsValid,
@@ -48,10 +50,8 @@ public enum CertificateValidationError
 // Credential Management (DPAPI)
 public interface ICredentialManager
 {
-    Task<bool> SavePasswordAsync(string key, string password, CancellationToken ct);
-    Task<string?> GetPasswordAsync(string key, CancellationToken ct);
-    Task<bool> DeletePasswordAsync(string key, CancellationToken ct);
-    Task<bool> ExistsAsync(string key, CancellationToken ct);
+    Task<bool> SavePasswordAsync(string identifier, string password, CancellationToken cancellationToken = default);
+    Task<string?> GetPasswordAsync(string identifier, CancellationToken cancellationToken = default);
 }
 
 public interface INsuRepository

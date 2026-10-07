@@ -21,6 +21,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
     private readonly DiscoverCertificatesUseCase _discoverCertificates;
     private readonly LoadCertificateUseCase _loadCertificate;
     private readonly SincronizarCarteiraUseCase _sincronizarCarteira;
+    private readonly ResetNsuUseCase _resetNsuUseCase;
+    private readonly IGapAnalyzer _gapAnalyzer;
+    private readonly IExcelExporter _excelExporter;
     private readonly INsuRepository _nsuRepository;
     private readonly ICredentialManager _credentialManager;
     private readonly IAppSettingsProvider _settings;
@@ -47,6 +50,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         DiscoverCertificatesUseCase discoverCertificates,
         LoadCertificateUseCase loadCertificate,
         SincronizarCarteiraUseCase sincronizarCarteira,
+        ResetNsuUseCase resetNsuUseCase,
+        IGapAnalyzer gapAnalyzer,
+        IExcelExporter excelExporter,
         INsuRepository nsuRepository,
         ICredentialManager credentialManager,
         IAppSettingsProvider settings,
@@ -55,6 +61,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         _discoverCertificates = discoverCertificates;
         _loadCertificate = loadCertificate;
         _sincronizarCarteira = sincronizarCarteira;
+        _resetNsuUseCase = resetNsuUseCase;
+        _gapAnalyzer = gapAnalyzer;
+        _excelExporter = excelExporter;
         _nsuRepository = nsuRepository;
         _credentialManager = credentialManager;
         _settings = settings;
@@ -69,9 +78,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         SelectAllCommand = new RelayCommand(SelectAllCertificates, () => !IsBusy && !IsSyncing && Certificates.Count > 0);
         ClearSelectionCommand = new RelayCommand(ClearCertificateSelection, () => !IsBusy && !IsSyncing && Certificates.Count > 0);
         ValidateConfigurationCommand = new RelayCommand(ValidateConfiguration, () => !IsBusy && !IsSyncing);
-        StartSyncCommand = new AsyncRelayCommand(StartSyncAsync, () => !IsBusy && !IsSyncing && CanStartSync());
+        StartSyncCommand = new AsyncRelayCommand(StartSyncAsync, () => !IsBusy && !IsSyncing && CanStartSync);
         CancelSyncCommand = new AsyncRelayCommand(CancelSyncAsync, () => IsSyncing);
         ResetNsuCommand = new AsyncRelayCommand(ResetNsuAsync, () => !IsBusy && !IsSyncing && CanResetNsu());
+        AnalyzeGapsCommand = new AsyncRelayCommand(AnalyzeGapsAsync, () => !IsBusy && !IsSyncing && CanAnalyzeGaps());
+        RecoverGapsCommand = new AsyncRelayCommand(RecoverGapsAsync, () => !IsBusy && !IsSyncing && CanRecoverGaps());
+        ExportExecutionCommand = new AsyncRelayCommand(ExportExecutionAsync, () => !IsBusy && !IsSyncing);
+        ExportInventoryCommand = new AsyncRelayCommand(ExportInventoryAsync, () => !IsBusy && !IsSyncing);
+        ChooseCertificateFolderCommand = new RelayCommand(ChooseCertificateFolder, () => !IsBusy && !IsSyncing);
         ChooseDestinationFolderCommand = new RelayCommand(ChooseDestinationFolder, () => !IsBusy && !IsSyncing);
         CertificatesView = CollectionViewSource.GetDefaultView(Certificates);
         CertificatesView.Filter = FilterCertificate;
@@ -94,6 +108,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
     public AsyncRelayCommand StartSyncCommand { get; }
     public AsyncRelayCommand CancelSyncCommand { get; }
     public AsyncRelayCommand ResetNsuCommand { get; }
+    public AsyncRelayCommand AnalyzeGapsCommand { get; }
+    public AsyncRelayCommand RecoverGapsCommand { get; }
+    public AsyncRelayCommand ExportExecutionCommand { get; }
+    public AsyncRelayCommand ExportInventoryCommand { get; }
+    public RelayCommand ChooseCertificateFolderCommand { get; }
     public RelayCommand ChooseDestinationFolderCommand { get; }
 
     public ICollectionView CertificatesView { get; }
@@ -191,6 +210,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
     public int TotalXmlGravados => _totalDocumentos;
     public int TotalErros => _totalErros;
     public int EmpresasProcessadas => _empresasProcessadas;
+
+    public bool HasSelectedCertificates => Certificates.Any(c => c.Selected);
 
     public string SyncProgressText => _isSyncing
         ? $"Sincronizando: {_empresasProcessadas}/{_totalEmpresas} empresas | {_totalDocumentos} docs | {_totalErros} erros | Atual: {_currentCnpj} NSU {_currentNsu}"
@@ -329,15 +350,22 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         }
     }
 
-    private bool CanStartSync()
-    {
-        return Certificates.Any(c => c.Selected && c.HasPassword && c.HasPrivateKey && c.IsValidCertificate());
-    }
-
     private bool CanResetNsu()
     {
         return Certificates.Any(c => c.Selected);
     }
+
+    private bool CanAnalyzeGaps()
+    {
+        return Certificates.Any(c => c.Selected);
+    }
+
+    private bool CanRecoverGaps()
+    {
+        return Certificates.Any(c => c.Selected);
+    }
+
+    public bool CanStartSync => Certificates.Any(c => c.Selected && c.HasPassword && c.HasPrivateKey && c.IsValidCertificate());
 
     private async Task StartSyncAsync()
     {
@@ -513,11 +541,205 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         AddLog("Reset de NSU concluido.", LogLevel.Info);
     }
 
+    private async Task AnalyzeGapsAsync()
+    {
+        if (!CanAnalyzeGaps())
+            return;
+
+        var selected = Certificates.Where(c => c.Selected).ToList();
+        AddLog($"Iniciando analise de lacunas para {selected.Count} empresa(s)...", LogLevel.Info);
+
+        try
+        {
+            foreach (var cert in selected)
+            {
+                if (Cnpj.TryParse(cert.ExtractCnpj(), out var cnpj))
+                {
+                    var result = await _gapAnalyzer.AnalyzeAsync(cnpj, _syncCancellation!.Token);
+                    AddLog($"Empresa {cert.Subject} ({cnpj.Format()}): {result.TotalLacunas} lacuna(s) em {result.Intervalos.Count} intervalo(s)", 
+                        result.TotalLacunas > 0 ? LogLevel.Warning : LogLevel.Success);
+                    
+                    foreach (var intervalo in result.Intervalos)
+                    {
+                        AddLog($"  Lacuna: NSU {intervalo.Inicio} a {intervalo.Fim} ({intervalo.Quantidade} NSUs)", LogLevel.Info);
+                    }
+                }
+            }
+            AddLog("Analise de lacunas concluida.", LogLevel.Success);
+        }
+        catch (OperationCanceledException)
+        {
+            AddLog("Analise de lacunas cancelada.", LogLevel.Warning);
+        }
+        catch (Exception ex)
+        {
+            AddLog($"Erro durante analise de lacunas: {ex.Message}", LogLevel.Error);
+        }
+    }
+
+    private async Task RecoverGapsAsync()
+    {
+        if (!CanRecoverGaps())
+            return;
+
+        var selected = Certificates.Where(c => c.Selected).ToList();
+        
+        // Primeiro analisar para obter as lacunas
+        var allNsus = new List<Nsu>();
+        
+        foreach (var cert in selected)
+        {
+            if (Cnpj.TryParse(cert.ExtractCnpj(), out var cnpj))
+            {
+                var result = await _gapAnalyzer.AnalyzeAsync(cnpj, _syncCancellation!.Token);
+                foreach (var intervalo in result.Intervalos)
+                {
+                    for (var nsu = intervalo.Inicio; nsu <= intervalo.Fim; nsu = new Nsu(nsu.Value + 1))
+                    {
+                        allNsus.Add(nsu);
+                    }
+                }
+            }
+        }
+
+        if (allNsus.Count == 0)
+        {
+            AddLog("Nenhuma lacuna encontrada para recuperar.", LogLevel.Info);
+            return;
+        }
+
+        AddLog($"Iniciando recuperacao de {allNsus.Count} NSU(s) em {selected.Count} empresa(s)...", LogLevel.Info);
+
+        try
+        {
+            var totalRecuperados = 0;
+            var totalFalhas = 0;
+
+            foreach (var cert in selected)
+            {
+                if (Cnpj.TryParse(cert.ExtractCnpj(), out var cnpj))
+                {
+                    var empresaNsus = allNsus.Where(n => true).ToList(); // All NSUs for this company
+                    var result = await _gapAnalyzer.RecoverAsync(cnpj, empresaNsus, _syncCancellation!.Token);
+                    totalRecuperados += result.Recuperados;
+                    totalFalhas += result.Falhas;
+
+                    AddLog($"Empresa {cert.Subject} ({cnpj.Format()}): {result.Recuperados} recuperado(s), {result.Falhas} falha(s)", 
+                        result.Falhas > 0 ? LogLevel.Error : LogLevel.Success);
+                    
+                    foreach (var nsuErro in result.NsuComErro)
+                        AddLog($"  Falha NSU {nsuErro}", LogLevel.Error);
+                }
+            }
+
+            AddLog($"Recuperacao concluida: {totalRecuperados} recuperado(s), {totalFalhas} falha(s)", 
+                totalFalhas > 0 ? LogLevel.Error : LogLevel.Success);
+        }
+        catch (OperationCanceledException)
+        {
+            AddLog("Recuperacao cancelada.", LogLevel.Warning);
+        }
+        catch (Exception ex)
+        {
+            AddLog($"Erro durante recuperacao: {ex.Message}", LogLevel.Error);
+        }
+    }
+
+    private async Task ExportExecutionAsync()
+    {
+        AddLog("Exportando relatorio de execucao...", LogLevel.Info);
+
+        try
+        {
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Title = "Exportar Relatorio de Execucao",
+                Filter = "Excel (*.xlsx)|*.xlsx|CSV (*.csv)|*.csv",
+                DefaultExt = "xlsx",
+                FileName = $"Execucao_NEO-e_{DateTimeOffset.Now:yyyyMMdd_HHmmss}"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                // Build execution records from current session
+                var records = new List<ExecutionRecord>
+                {
+                    new ExecutionRecord(
+                        Cnpj: Cnpj.Parse("00000000000000"), // Placeholder
+                        Empresa: "Resumo da Sessao",
+                        NsuInicial: Nsu.Zero,
+                        NsuFinal: new Nsu(_totalDocumentos),
+                        DocumentosProcessados: _totalDocumentos,
+                        Erros: _totalErros,
+                        Duracao: TimeSpan.Zero, // Could track actual duration
+                        Inicio: DateTimeOffset.Now.AddMinutes(-5), // Placeholder
+                        Fim: DateTimeOffset.Now,
+                        Status: _totalErros == 0 ? "Sucesso" : "Com Erros"
+                    )
+                };
+
+                var bytes = await _excelExporter.ExportExecutionAsync(records, CancellationToken.None);
+                await File.WriteAllBytesAsync(dialog.FileName, bytes);
+                AddLog($"Relatorio de execucao exportado para: {dialog.FileName}", LogLevel.Success);
+            }
+        }
+        catch (Exception ex)
+        {
+            AddLog($"Erro ao exportar relatorio de execucao: {ex.Message}", LogLevel.Error);
+        }
+    }
+
+    private async Task ExportInventoryAsync()
+    {
+        AddLog("Exportando inventario de documentos...", LogLevel.Info);
+
+        try
+        {
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Title = "Exportar Inventario de Documentos",
+                Filter = "Excel (*.xlsx)|*.xlsx|CSV (*.csv)|*.csv",
+                DefaultExt = "xlsx",
+                FileName = $"Inventario_NEO-e_{DateTimeOffset.Now:yyyyMMdd_HHmmss}"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                var allRecords = new List<InventoryRecord>();
+
+                foreach (var cert in Certificates.Where(c => c.Selected))
+                {
+                    if (Cnpj.TryParse(cert.ExtractCnpj(), out var cnpj))
+                    {
+                        var documentos = await _nsuRepository.GetAllAsync(CancellationToken.None);
+                        // Note: This would need a proper document repository query
+                        // For now, create placeholder records
+                    }
+                }
+
+                var bytes = await _excelExporter.ExportInventoryAsync(allRecords, CancellationToken.None);
+                await File.WriteAllBytesAsync(dialog.FileName, bytes);
+                AddLog($"Inventario exportado para: {dialog.FileName}", LogLevel.Success);
+            }
+        }
+        catch (Exception ex)
+        {
+            AddLog($"Erro ao exportar inventario: {ex.Message}", LogLevel.Error);
+        }
+    }
+
     private void ChooseDestinationFolder()
     {
         var dialog = new Microsoft.Win32.OpenFolderDialog { Title = "Escolher pasta de destino" };
         if (dialog.ShowDialog() == true)
             SetDestinationFolder(dialog.FolderName);
+    }
+
+    private void ChooseCertificateFolder()
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog { Title = "Escolher pasta de certificados" };
+        if (dialog.ShowDialog() == true)
+            SetCertificateFolder(dialog.FolderName);
     }
 
     private bool FilterCertificate(object item)

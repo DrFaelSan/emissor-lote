@@ -18,28 +18,15 @@ public sealed class AdnHttpClient : IAdnClient
     private readonly AdnSettings _settings;
     private readonly ILogger _logger;
     private readonly IEnvironmentContext _environment;
+    private readonly IAdnRateLimiter _rateLimiter;
     private readonly ConcurrentDictionary<string, HttpClient> _clients = new(StringComparer.OrdinalIgnoreCase);
-    
-    // Rate limiting: global + per certificate (company)
-    private readonly SemaphoreSlim _globalSemaphore;
-    private readonly ConcurrentDictionary<string, SemaphoreSlim> _companySemaphores = new(StringComparer.OrdinalIgnoreCase);
-    private readonly TimeSpan _minIntervalBetweenCalls;
 
-    public AdnHttpClient(IOptions<AdnSettings> settings, ILogger logger, IEnvironmentContext environment)
+    public AdnHttpClient(IOptions<AdnSettings> settings, ILogger logger, IEnvironmentContext environment, IAdnRateLimiter rateLimiter)
     {
         _settings = settings.Value;
         _logger = logger;
         _environment = environment;
-        
-        // Global: max concurrent requests (default 2)
-        var maxGlobalConcurrent = Math.Max(1, _settings.RateLimitPerMinute / 300); // ~1 per 150 req/min
-        _globalSemaphore = new SemaphoreSlim(maxGlobalConcurrent, maxGlobalConcurrent);
-        
-        // Minimum interval between calls (default 300ms based on RateLimitPerMinute)
-        _minIntervalBetweenCalls = TimeSpan.FromMilliseconds(60000.0 / Math.Max(1, _settings.RateLimitPerMinute));
-        
-        _logger.LogInformation("Rate limiting configurado: GlobalMaxConcurrent={Max}, MinInterval={Interval}ms",
-            maxGlobalConcurrent, _minIntervalBetweenCalls.TotalMilliseconds);
+        _rateLimiter = rateLimiter;
     }
 
     public async Task<DfeDistributionResponse> GetDfeAsync(Cnpj cnpj, Nsu nsu, X509Certificate2 certificate, CancellationToken ct)
@@ -92,9 +79,6 @@ public sealed class AdnHttpClient : IAdnClient
     private async Task<HttpResponseMessage> ExecuteWithRetryAsync(HttpClient client, Func<HttpRequestMessage> requestFactory, X509Certificate2 certificate, CancellationToken ct)
     {
         var companyKey = certificate.Thumbprint ?? certificate.Subject;
-        var companySemaphore = _companySemaphores.GetOrAdd(companyKey, _ => new SemaphoreSlim(1, 1));
-        var lastCallTime = DateTimeOffset.MinValue;
-        var callLock = new object();
 
         var attempt = 0;
         Exception? lastException = null;
@@ -103,77 +87,48 @@ public sealed class AdnHttpClient : IAdnClient
         {
             ct.ThrowIfCancellationRequested();
 
-            // Rate limiting: wait for global semaphore
-            await _globalSemaphore.WaitAsync(ct);
+            // Rate limiting: use the shared rate limiter
+            await _rateLimiter.WaitAsync(companyKey, ct);
+
             try
             {
-                // Rate limiting: wait for company semaphore (serial per company)
-                await companySemaphore.WaitAsync(ct);
-                try
+                using var request = requestFactory();
+                var response = await client.SendAsync(request, ct);
+
+                if (_settings.Retry.RetryableStatusCodes.Contains((int)response.StatusCode))
                 {
-                    // Rate limiting: enforce minimum interval between calls
-                    lock (callLock)
-                    {
-                        var now = DateTimeOffset.UtcNow;
-                        var elapsed = now - lastCallTime;
-                        if (elapsed < _minIntervalBetweenCalls)
-                        {
-                            var waitTime = _minIntervalBetweenCalls - elapsed;
-                            _logger.LogDebug("Rate limit: aguardando {WaitTime}ms antes da próxima chamada", waitTime.TotalMilliseconds);
-                            Task.Delay(waitTime, ct).Wait(ct);
-                        }
-                        lastCallTime = DateTimeOffset.UtcNow;
-                    }
-
-                    try
-                    {
-                        using var request = requestFactory();
-                        var response = await client.SendAsync(request, ct);
-
-                        if (_settings.Retry.RetryableStatusCodes.Contains((int)response.StatusCode))
-                        {
-                            if (attempt >= _settings.Retry.MaxAttempts)
-                                return response;
-
-                            var delay = CalculateDelay(attempt, response);
-                            _logger.LogWarning("ADN retornou {StatusCode}, tentativa {Attempt}/{MaxAttempts}, aguardando {Delay}ms",
-                                response.StatusCode, attempt + 1, _settings.Retry.MaxAttempts + 1, delay.TotalMilliseconds);
-
-                            await Task.Delay(delay, ct);
-                            attempt++;
-                            continue;
-                        }
-
+                    if (attempt >= _settings.Retry.MaxAttempts)
                         return response;
-                    }
-                    catch (HttpRequestException ex) when (attempt < _settings.Retry.MaxAttempts)
-                    {
-                        lastException = ex;
-                        var delay = CalculateDelay(attempt, null);
-                        _logger.LogWarning("Erro de rede ao chamar ADN: {Message}, tentativa {Attempt}/{MaxAttempts}, aguardando {Delay}ms",
-                            ex.Message, attempt + 1, _settings.Retry.MaxAttempts + 1, delay.TotalMilliseconds);
 
-                        await Task.Delay(delay, ct);
-                        attempt++;
-                    }
-                    catch (TaskCanceledException) when (!ct.IsCancellationRequested && attempt < _settings.Retry.MaxAttempts)
-                    {
-                        var delay = CalculateDelay(attempt, null);
-                        _logger.LogWarning("Timeout ao chamar ADN, tentativa {Attempt}/{MaxAttempts}, aguardando {Delay}ms",
-                            attempt + 1, _settings.Retry.MaxAttempts + 1, delay.TotalMilliseconds);
+                    var delay = CalculateDelay(attempt, response);
+                    _logger.LogWarning("ADN retornou {StatusCode}, tentativa {Attempt}/{MaxAttempts}, aguardando {Delay}ms",
+                        response.StatusCode, attempt + 1, _settings.Retry.MaxAttempts + 1, delay.TotalMilliseconds);
 
-                        await Task.Delay(delay, ct);
-                        attempt++;
-                    }
+                    await Task.Delay(delay, ct);
+                    attempt++;
+                    continue;
                 }
-                finally
-                {
-                    companySemaphore.Release();
-                }
+
+                return response;
             }
-            finally
+            catch (HttpRequestException ex) when (attempt < _settings.Retry.MaxAttempts)
             {
-                _globalSemaphore.Release();
+                lastException = ex;
+                var delay = CalculateDelay(attempt, null);
+                _logger.LogWarning("Erro de rede ao chamar ADN: {Message}, tentativa {Attempt}/{MaxAttempts}, aguardando {Delay}ms",
+                    ex.Message, attempt + 1, _settings.Retry.MaxAttempts + 1, delay.TotalMilliseconds);
+
+                await Task.Delay(delay, ct);
+                attempt++;
+            }
+            catch (TaskCanceledException) when (!ct.IsCancellationRequested && attempt < _settings.Retry.MaxAttempts)
+            {
+                var delay = CalculateDelay(attempt, null);
+                _logger.LogWarning("Timeout ao chamar ADN, tentativa {Attempt}/{MaxAttempts}, aguardando {Delay}ms",
+                    attempt + 1, _settings.Retry.MaxAttempts + 1, delay.TotalMilliseconds);
+
+                await Task.Delay(delay, ct);
+                attempt++;
             }
         }
 
@@ -251,12 +206,23 @@ public sealed class AdnHttpClient : IAdnClient
 
     private static DfeDocument MapDocument(AdnDfeDocumentDto dto)
     {
+        var tipo = MapTipoDocumento(dto.TipoDocumento);
         return new DfeDocument(
             new Nsu(dto.Nsu),
             ChaveAcesso.Parse(dto.ChaveAcesso),
-            Enum.TryParse<TipoDocumento>(dto.TipoDocumento, out var tipo) ? tipo : TipoDocumento.NfseRecebida,
+            tipo,
             DateTimeOffset.Parse(dto.DataHora),
             dto.Xml);
+    }
+
+    private static TipoDocumento MapTipoDocumento(string apiTipo)
+    {
+        return apiTipo?.ToUpperInvariant() switch
+        {
+            "NFS-E" => TipoDocumento.NfseRecebida, // Default to recebida, can be refined later
+            "EVENTO" => TipoDocumento.Evento,
+            _ => TipoDocumento.NfseRecebida
+        };
     }
 
     private static EventosResponse MapEventos(AdnEventosResponseDto dto)

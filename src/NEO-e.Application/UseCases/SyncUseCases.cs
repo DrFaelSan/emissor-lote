@@ -176,6 +176,51 @@ public sealed record EmpresaSyncResult(
     Nsu UltimoNsu,
     string? Erro);
 
+public sealed class ResetNsuUseCase
+{
+    private readonly INsuRepository _nsuRepository;
+    private readonly IProgressReporter _progress;
+
+    public ResetNsuUseCase(INsuRepository nsuRepository, IProgressReporter progress)
+    {
+        _nsuRepository = nsuRepository;
+        _progress = progress;
+    }
+
+    public async Task<ResetNsuResult> ExecuteAsync(IReadOnlyList<Empresa> empresas, CancellationToken ct)
+    {
+        var sucessos = 0;
+        var falhas = 0;
+        var erros = new List<string>();
+
+        foreach (var empresa in empresas.Where(e => e.Selecionada))
+        {
+            ct.ThrowIfCancellationRequested();
+
+            try
+            {
+                await _nsuRepository.DeleteAsync(empresa.Cnpj, ct);
+                empresa.ResetarNsu();
+                _progress.ReportProgress($"NSU resetado para {empresa.Nome} ({empresa.Cnpj.Format()})");
+                sucessos++;
+            }
+            catch (Exception ex)
+            {
+                falhas++;
+                erros.Add($"{empresa.Nome}: {ex.Message}");
+                _progress.ReportWarning($"Erro ao resetar NSU para {empresa.Nome}: {ex.Message}");
+            }
+        }
+
+        return new ResetNsuResult(sucessos, falhas, erros);
+    }
+}
+
+public sealed record ResetNsuResult(
+    int Sucessos,
+    int Falhas,
+    IReadOnlyList<string> Erros);
+
 public sealed class SincronizarCarteiraUseCase
 {
     private readonly SincronizarEmpresaUseCase _sincronizarEmpresa;

@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Serilog;
 using NEO_e.Application.Contracts;
+using NEO_e.Application.UseCases;
 using NEO_e.Infrastructure.Certificates;
 using NEO_e.Infrastructure.Http;
 using NEO_e.Infrastructure.Logging;
@@ -73,9 +74,18 @@ public static class ServiceCollectionExtensions
             return new SqliteReceivedDocumentRepository(dbPath);
         });
 
+        services.AddSingleton<IAdnRateLimiter>(sp =>
+        {
+            var settings = sp.GetRequiredService<IOptions<AdnSettings>>().Value;
+            var maxGlobalConcurrent = Math.Max(1, settings.RateLimitPerMinute / 300);
+            var minInterval = TimeSpan.FromMilliseconds(60000.0 / Math.Max(1, settings.RateLimitPerMinute));
+            return new AdnRateLimiter(maxGlobalConcurrent, minInterval);
+        });
+
         services.AddSingleton<IAdnClient, AdnHttpClient>();
         services.AddSingleton<IManifestationClient, SefazManifestationClient>();
         services.AddSingleton<IManifestationClient, AdnManifestationClient>();
+        services.AddSingleton<ResetNsuUseCase>();
 
         return services;
     }

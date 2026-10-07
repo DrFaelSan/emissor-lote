@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Xml;
+using System.Security.Cryptography.Xml;
 using System.Xml.Linq;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -105,26 +107,31 @@ public sealed class SefazManifestationClient : IManifestationClient
     private XElement BuildEventoXml(ManifestationEvent evento, X509Certificate2 certificate)
     {
         var ns = "http://www.portalfiscal.inf.br/nfe";
-        var eventoElement = new XElement(XName.Get("evento", ns),
-            new XAttribute("versao", "1.00"),
-            new XElement(XName.Get("infEvento", ns),
-                new XAttribute("Id", $"ID{evento.TipoEvento}{evento.ChaveAcesso.Value}{evento.SequenciaEvento:D2}"),
-                new XElement(XName.Get("cOrgao", ns), _settings.CodigoOrgao),
-                new XElement(XName.Get("tpAmb", ns), _settings.TpAmb),
-                new XElement(XName.Get("CNPJ", ns), evento.CnpjDestinatario.Value),
-                new XElement(XName.Get("chNFe", ns), evento.ChaveAcesso.Value),
-                new XElement(XName.Get("dhEvento", ns), evento.DataHoraEvento.ToString("yyyy-MM-ddTHH:mm:sszzz")),
-                new XElement(XName.Get("tpEvento", ns), evento.TipoEvento),
-                new XElement(XName.Get("nSeqEvento", ns), evento.SequenciaEvento),
-                new XElement(XName.Get("detEvento", ns),
-                    new XAttribute("versaoEvento", "1.00"),
-                    BuildDetEventoContent(evento)
-                )
+        var infEventoId = $"ID{evento.TipoEvento}{evento.ChaveAcesso.Value}{evento.SequenciaEvento:D2}";
+        
+        var infEventoElement = new XElement(XName.Get("infEvento", ns),
+            new XAttribute("Id", infEventoId),
+            new XElement(XName.Get("cOrgao", ns), _settings.CodigoOrgao),
+            new XElement(XName.Get("tpAmb", ns), _settings.TpAmb),
+            new XElement(XName.Get("CNPJ", ns), evento.CnpjDestinatario.Value),
+            new XElement(XName.Get("chNFe", ns), evento.ChaveAcesso.Value),
+            new XElement(XName.Get("dhEvento", ns), evento.DataHoraEvento.ToString("yyyy-MM-ddTHH:mm:sszzz")),
+            new XElement(XName.Get("tpEvento", ns), evento.TipoEvento),
+            new XElement(XName.Get("nSeqEvento", ns), evento.SequenciaEvento),
+            new XElement(XName.Get("detEvento", ns),
+                new XAttribute("versaoEvento", "1.00"),
+                BuildDetEventoContent(evento)
             )
         );
 
-        // Adicionar assinatura digital (XMLDSIG) - simplificado
-        // Em produção, usar SignedXml para assinar o infEvento
+        // Assinar o infEvento com XMLDSIG
+        var signedInfEvento = SignXmlElement(infEventoElement, certificate, infEventoId);
+
+        var eventoElement = new XElement(XName.Get("evento", ns),
+            new XAttribute("versao", "1.00"),
+            signedInfEvento
+        );
+
         return eventoElement;
     }
 
@@ -192,5 +199,51 @@ public sealed class SefazManifestationClient : IManifestationClient
             _logger.LogError(ex, "Erro ao parsear resposta SOAP da SEFAZ");
             return ManifestationResult.Failure($"Erro ao processar resposta: {ex.Message}");
         }
+    }
+
+    private XElement SignXmlElement(XElement elementToSign, X509Certificate2 certificate, string elementId)
+    {
+        // Criar documento XML para assinatura
+        var doc = new XmlDocument();
+        doc.LoadXml(elementToSign.ToString(SaveOptions.DisableFormatting));
+
+        // Criar objeto SignedXml
+        var signedXml = new SignedXml(doc);
+        signedXml.SigningKey = certificate.GetRSAPrivateKey();
+        
+        if (signedXml.SigningKey == null)
+        {
+            throw new InvalidOperationException("Certificado não possui chave privada RSA para assinatura");
+        }
+
+        // Configurar referência para o elemento a ser assinado
+        var reference = new Reference($"#{elementId}");
+        reference.AddTransform(new XmlDsigEnvelopedSignatureTransform());
+        reference.AddTransform(new XmlDsigC14NTransform());
+        signedXml.AddReference(reference);
+
+        // Adicionar KeyInfo com o certificado
+        var keyInfo = new KeyInfo();
+        keyInfo.AddClause(new KeyInfoX509Data(certificate));
+        signedXml.KeyInfo = keyInfo;
+
+        // Calcular assinatura
+        signedXml.ComputeSignature();
+
+        // Obter a assinatura XML
+        var xmlSignature = signedXml.GetXml();
+
+        // Converter de volta para XElement
+        var docSigned = new XmlDocument();
+        docSigned.LoadXml(elementToSign.ToString(SaveOptions.DisableFormatting));
+        
+        // Importar a assinatura para o documento
+        var importedSignature = docSigned.ImportNode(xmlSignature, true);
+        var documentElement = docSigned.DocumentElement;
+        documentElement?.AppendChild(importedSignature);
+
+        // Converter de volta para XElement
+        using var stringReader = new StringReader(docSigned.OuterXml);
+        return XElement.Load(stringReader);
     }
 }
