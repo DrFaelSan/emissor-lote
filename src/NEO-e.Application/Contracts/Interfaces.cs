@@ -81,6 +81,19 @@ public interface IReceivedDocumentRepository
     Task SaveBatchAsync(IEnumerable<DocumentoRecebido> documentos, CancellationToken ct);
 }
 
+public interface IReceivedDocumentIndexer
+{
+    Task<ReceivedDocumentIndexResult> IndexAsync(string destinationPath, CancellationToken ct);
+}
+
+public sealed record ReceivedDocumentIndexError(string FilePath, string Message);
+
+public sealed record ReceivedDocumentIndexResult(
+    int Scanned,
+    int Indexed,
+    int Skipped,
+    IReadOnlyList<ReceivedDocumentIndexError> Errors);
+
 public interface IAdnClient
 {
     Task<DfeDistributionResponse> GetDfeAsync(Cnpj cnpj, Nsu nsu, X509Certificate2 certificate, CancellationToken ct);

@@ -75,6 +75,8 @@ public sealed class SincronizarEmpresaUseCase
 
                     try
                     {
+                        doc.ClassificarPara(empresa.Cnpj);
+
                         var existe = await _documentRepository.GetByChaveAsync(doc.ChaveAcesso, ct);
                         if (existe is not null && existe.ConteudoIgual(doc.XmlContent))
                         {

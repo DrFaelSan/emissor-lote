@@ -41,7 +41,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<NEO_e.Application.Contracts.ILogger, SerilogLogger>();
 
         services.AddSingleton<ICertificateRepository, CertificateRepository>();
-        services.AddSingleton<IXmlParser, NfseXmlParser>();
+        services.AddSingleton<NfseXmlParser>();
+        services.AddSingleton<NfeXmlParser>();
+        services.AddSingleton<IXmlParser, CompositeXmlParser>();
+        services.AddSingleton<IReceivedDocumentIndexer, ReceivedDocumentIndexer>();
         services.AddSingleton<IFileWriter, AtomicXmlFileWriter>();
         services.AddSingleton<IExcelExporter, ClosedXmlExcelExporter>();
         services.AddSingleton<ICredentialManager, DpapiCredentialManager>();

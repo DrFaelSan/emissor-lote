@@ -156,6 +156,10 @@
                             Background="Transparent" Foreground="{StaticResource TextSecondaryBrush}" 
                             BorderThickness="1" BorderBrush="{StaticResource TextSecondaryBrush}" Margin="0,0,10,0"
                             ToolTip="Exporta inventário de documentos para Excel"/>
+                    <Button Content="Indexar Recebidos" Command="{Binding IndexReceivedDocumentsCommand}"
+                            Background="Transparent" Foreground="{StaticResource TextSecondaryBrush}"
+                            BorderThickness="1" BorderBrush="{StaticResource TextSecondaryBrush}" Margin="0,0,10,0"
+                            ToolTip="Varre os XMLs da pasta de destino e indexa os documentos recebidos"/>
                 </StackPanel>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">

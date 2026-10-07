@@ -25,6 +25,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
     private readonly IGapAnalyzer _gapAnalyzer;
     private readonly IExcelExporter _excelExporter;
     private readonly INsuRepository _nsuRepository;
+    private readonly IReceivedDocumentIndexer _receivedDocumentIndexer;
     private readonly ICredentialManager _credentialManager;
     private readonly IAppSettingsProvider _settings;
     private readonly IEnvironmentContext _environment;
@@ -54,6 +55,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         IGapAnalyzer gapAnalyzer,
         IExcelExporter excelExporter,
         INsuRepository nsuRepository,
+        IReceivedDocumentIndexer receivedDocumentIndexer,
         ICredentialManager credentialManager,
         IAppSettingsProvider settings,
         IEnvironmentContext environment)
@@ -65,6 +67,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         _gapAnalyzer = gapAnalyzer;
         _excelExporter = excelExporter;
         _nsuRepository = nsuRepository;
+        _receivedDocumentIndexer = receivedDocumentIndexer;
         _credentialManager = credentialManager;
         _settings = settings;
         _environment = environment;
@@ -85,6 +88,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         RecoverGapsCommand = new AsyncRelayCommand(RecoverGapsAsync, () => !IsBusy && !IsSyncing && CanRecoverGaps());
         ExportExecutionCommand = new AsyncRelayCommand(ExportExecutionAsync, () => !IsBusy && !IsSyncing);
         ExportInventoryCommand = new AsyncRelayCommand(ExportInventoryAsync, () => !IsBusy && !IsSyncing);
+        IndexReceivedDocumentsCommand = new AsyncRelayCommand(IndexReceivedDocumentsAsync, () => !IsBusy && !IsSyncing);
         ChooseCertificateFolderCommand = new RelayCommand(ChooseCertificateFolder, () => !IsBusy && !IsSyncing);
         ChooseDestinationFolderCommand = new RelayCommand(ChooseDestinationFolder, () => !IsBusy && !IsSyncing);
         CertificatesView = CollectionViewSource.GetDefaultView(Certificates);
@@ -112,6 +116,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
     public AsyncRelayCommand RecoverGapsCommand { get; }
     public AsyncRelayCommand ExportExecutionCommand { get; }
     public AsyncRelayCommand ExportInventoryCommand { get; }
+    public AsyncRelayCommand IndexReceivedDocumentsCommand { get; }
     public RelayCommand ChooseCertificateFolderCommand { get; }
     public RelayCommand ChooseDestinationFolderCommand { get; }
 
@@ -179,6 +184,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
                 ValidateConfigurationCommand.RaiseCanExecuteChanged();
                 StartSyncCommand.RaiseCanExecuteChanged();
                 ResetNsuCommand.RaiseCanExecuteChanged();
+                IndexReceivedDocumentsCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -198,6 +204,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
                 StartSyncCommand.RaiseCanExecuteChanged();
                 CancelSyncCommand.RaiseCanExecuteChanged();
                 ResetNsuCommand.RaiseCanExecuteChanged();
+                IndexReceivedDocumentsCommand.RaiseCanExecuteChanged();
                 OnPropertyChanged(nameof(SyncProgressText));
                 OnPropertyChanged(nameof(TotalEmpresas));
                 OnPropertyChanged(nameof(TotalXmlGravados));
@@ -725,6 +732,37 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         catch (Exception ex)
         {
             AddLog($"Erro ao exportar inventario: {ex.Message}", LogLevel.Error);
+        }
+    }
+
+    private async Task IndexReceivedDocumentsAsync()
+    {
+        IsBusy = true;
+        StatusMessage = "Indexando documentos fiscais existentes...";
+
+        try
+        {
+            var result = await Task.Run(
+                () => _receivedDocumentIndexer.IndexAsync(DestinationFolder, CancellationToken.None));
+            AddLog(
+                $"Indexacao concluida: {result.Indexed} novo(s), {result.Skipped} ignorado(s), {result.Errors.Count} erro(s).",
+                result.Errors.Count > 0 ? LogLevel.Warning : LogLevel.Success);
+
+            foreach (var error in result.Errors)
+                AddLog($"Falha ao indexar {Path.GetFileName(error.FilePath)}: {error.Message}", LogLevel.Error);
+
+            StatusMessage = result.Errors.Count == 0
+                ? "Indexacao concluida."
+                : $"Indexacao concluida com {result.Errors.Count} erro(s).";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Falha ao indexar documentos existentes.";
+            AddLog($"Falha na indexacao: {ex.Message}", LogLevel.Error);
+        }
+        finally
+        {
+            IsBusy = false;
         }
     }
 

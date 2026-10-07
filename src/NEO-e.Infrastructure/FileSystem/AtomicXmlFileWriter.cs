@@ -52,11 +52,14 @@ public sealed class AtomicXmlFileWriter : IFileWriter
     {
         var type = documento.Tipo switch
         {
-            TipoDocumento.NfseEmitida => "emitidas",
+            TipoDocumento.NfseEmitida or TipoDocumento.NfeEmitida => "emitidas",
             TipoDocumento.Evento => "eventos",
             _ => "recebidas"
         };
-        var root = Path.Combine(_settings.DestinationPath, documento.CnpjDestinatario.Value);
+        var cnpj = documento.Tipo is TipoDocumento.NfseEmitida or TipoDocumento.NfeEmitida
+            ? documento.CnpjEmitente
+            : documento.CnpjDestinatario;
+        var root = Path.Combine(_settings.DestinationPath, cnpj.Value);
         return _settings.FolderStructure switch
         {
             FolderStructure.Flat => root,

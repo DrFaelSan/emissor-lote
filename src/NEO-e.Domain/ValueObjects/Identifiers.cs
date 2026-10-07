@@ -112,7 +112,8 @@ public readonly record struct Nsu
 
 public readonly record struct ChaveAcesso
 {
-    private const int Length = 50;
+    private const int NfeLength = 44;
+    private const int NfseLength = 50;
     private static readonly Regex DigitsOnly = new(@"\D", RegexOptions.Compiled);
 
     public string Value { get; }
@@ -129,8 +130,8 @@ public readonly record struct ChaveAcesso
 
         var digits = DigitsOnly.Replace(input, "");
 
-        if (digits.Length != Length)
-            throw new ArgumentException($"Chave de acesso deve ter {Length} dígitos", nameof(input));
+        if (digits.Length is not NfeLength and not NfseLength)
+            throw new ArgumentException($"Chave de acesso deve ter {NfeLength} ou {NfseLength} dígitos", nameof(input));
 
         return new ChaveAcesso(digits);
     }
