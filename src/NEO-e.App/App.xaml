@@ -21,6 +21,20 @@
         <SolidColorBrush x:Key="LogWarningBrush" Color="#B8860B" />
         <SolidColorBrush x:Key="LogErrorBrush" Color="#CC0000" />
         <SolidColorBrush x:Key="LogSuccessBrush" Color="#2E7D32" />
+        <SolidColorBrush x:Key="TextTertiaryBrush" Color="#A5A196" />
+        <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#F5F3EC" />
+        <SolidColorBrush x:Key="DangerPressedBrush" Color="#933028" />
+
+        <SolidColorBrush x:Key="IslandBackgroundBrush" Color="#0A0A0A" />
+        <SolidColorBrush x:Key="IslandBackgroundElevatedBrush" Color="#1C1C1E" />
+        <SolidColorBrush x:Key="IslandBackgroundHoverBrush" Color="#2C2C2E" />
+        <SolidColorBrush x:Key="IslandBackgroundPressedBrush" Color="#3A3A3C" />
+        <SolidColorBrush x:Key="IslandDividerBrush" Color="#2F2F31" />
+        <SolidColorBrush x:Key="IslandTextPrimaryBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="IslandTextSecondaryBrush" Color="#8E8E93" />
+        <SolidColorBrush x:Key="IslandTextTertiaryBrush" Color="#5A5A5E" />
+        <SolidColorBrush x:Key="IslandAccentBrush" Color="#E8C547" />
+        <SolidColorBrush x:Key="IslandDangerBrush" Color="#FF453A" />
 
         <!-- Sombras Suaves (Modern UI) -->
         <DropShadowEffect x:Key="CardShadowEffect" Color="#000000" BlurRadius="24" ShadowDepth="4" Direction="270" Opacity="0.08" />
@@ -128,6 +142,182 @@
         <Style x:Key="DangerButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="Background" Value="{StaticResource DangerBrush}" />
             <Setter Property="Foreground" Value="{StaticResource TextOnPrimaryBrush}" />
+        </Style>
+
+        <DataTemplate x:Key="IconContentTemplate">
+            <TextBlock Text="{Binding}"
+                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                       FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType=Button}}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+        </DataTemplate>
+
+        <Style x:Key="WindowChromeButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="46" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="ContentTemplate" Value="{StaticResource IconContentTemplate}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bg"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                Margin="2,0">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="{StaticResource SurfaceHoverBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="{StaticResource SurfaceMutedBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="WindowChromeCloseButtonStyle" TargetType="Button" BasedOn="{StaticResource WindowChromeButtonStyle}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bg"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                Margin="2,0">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="{StaticResource DangerBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource TextOnPrimaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="{StaticResource DangerPressedBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="IslandPillStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource IslandBackgroundBrush}" />
+            <Setter Property="CornerRadius" Value="32" />
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="#000000" BlurRadius="32" ShadowDepth="6" Direction="270" Opacity="0.32" />
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="IslandChipStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource IslandBackgroundElevatedBrush}" />
+            <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="Margin" Value="0,0,10,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="IslandDividerStyle" TargetType="Border">
+            <Setter Property="Width" Value="1" />
+            <Setter Property="Background" Value="{StaticResource IslandDividerBrush}" />
+            <Setter Property="Margin" Value="10,10" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+        </Style>
+
+        <Style x:Key="IslandIconButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="36" />
+            <Setter Property="Height" Value="36" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource IslandTextSecondaryBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="ContentTemplate" Value="{StaticResource IconContentTemplate}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bg" Background="{TemplateBinding Background}" CornerRadius="999">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="{StaticResource IslandBackgroundHoverBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource IslandTextPrimaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="{StaticResource IslandBackgroundPressedBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bg" Property="Opacity" Value="0.35" />
+                                <Setter Property="Cursor" Value="Arrow" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="IslandPrimaryIconButtonStyle" TargetType="Button" BasedOn="{StaticResource IslandIconButtonStyle}">
+            <Setter Property="Background" Value="{StaticResource IslandAccentBrush}" />
+            <Setter Property="Foreground" Value="#0A0A0A" />
+            <Setter Property="Width" Value="40" />
+            <Setter Property="Height" Value="40" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bg" Background="{TemplateBinding Background}" CornerRadius="999">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Opacity" Value="0.88" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bg" Property="Opacity" Value="0.72" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bg" Property="Opacity" Value="0.35" />
+                                <Setter Property="Cursor" Value="Arrow" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="IslandTextStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource IslandTextPrimaryBrush}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="IslandMutedTextStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource IslandTextSecondaryBrush}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
 
         <!-- Tipografia Global Moderna -->
