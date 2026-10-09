@@ -1,3 +1,4 @@
+using NEO_e.App.Services;
 using NEO_e.App.ViewModels;
 using System;
 using System.Windows;
@@ -9,10 +10,11 @@ namespace NEO_e.App;
 /// </summary>
 public partial class MainWindow : Window
 {
-    public MainWindow(MainWindowViewModel viewModel)
+    public MainWindow(MainWindowViewModel viewModel, IIslandNotifier islandNotifier)
     {
         InitializeComponent();
         DataContext = viewModel;
+        DynamicIsland.Notifier = islandNotifier;
         StateChanged += OnWindowStateChanged;
     }
 

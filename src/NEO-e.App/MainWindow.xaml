@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         xmlns:local="clr-namespace:NEO_e.App.AttachedProperties"
+        xmlns:controls="clr-namespace:NEO_e.App.Controls"
         Title="NFS-e em lote - NEO-e" Height="840" Width="1280"
         MinHeight="720" MinWidth="980" Loaded="OnLoaded"
         WindowStartupLocation="CenterScreen"
@@ -18,27 +19,6 @@
     </shell:WindowChrome.WindowChrome>
 
     <Window.Resources>
-        <Style x:Key="IslandEnvChipStyle" TargetType="Border" BasedOn="{StaticResource IslandChipStyle}">
-            <Setter Property="Margin" Value="4,0,0,0" />
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding EnvironmentDescription}" Value="PRODUCAO (API REAL)">
-                    <Setter Property="Background" Value="#3A1A1A" />
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style x:Key="IslandEnvChipTextStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="10" />
-            <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="Foreground" Value="{StaticResource IslandAccentBrush}" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding EnvironmentDescription}" Value="PRODUCAO (API REAL)">
-                    <Setter Property="Foreground" Value="{StaticResource IslandDangerBrush}" />
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-
         <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="11" />
             <Setter Property="FontWeight" Value="SemiBold" />
@@ -67,76 +47,7 @@
                 </Border>
             </StackPanel>
 
-            <Border x:Name="Island"
-                    Grid.Column="1"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Style="{StaticResource IslandPillStyle}"
-                    shell:WindowChrome.IsHitTestVisibleInChrome="True">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <Border Grid.Column="0" Style="{StaticResource IslandEnvChipStyle}"
-                            ToolTip="Restrita usa o servico de homologacao da API. Producao acessa a API real.">
-                        <TextBlock Text="{Binding EnvironmentDescription}" Style="{StaticResource IslandEnvChipTextStyle}"/>
-                    </Border>
-
-                    <Border Grid.Column="1" Style="{StaticResource IslandDividerStyle}"/>
-
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="2,0,4,0">
-                        <TextBlock Style="{StaticResource IslandTextStyle}" FontSize="12" Text="{Binding TotalEmpresas}"/>
-                        <TextBlock Style="{StaticResource IslandMutedTextStyle}" Text="empresas" Margin="4,0,0,0"/>
-                        <TextBlock Text="&#xB7;" FontSize="11" VerticalAlignment="Center" Margin="8,0" Foreground="{StaticResource IslandTextTertiaryBrush}"/>
-                        <TextBlock Style="{StaticResource IslandTextStyle}" FontSize="12" Text="{Binding TotalXmlGravados}"/>
-                        <TextBlock Style="{StaticResource IslandMutedTextStyle}" Text="XML" Margin="4,0,0,0"/>
-                        <TextBlock Text="&#xB7;" FontSize="11" VerticalAlignment="Center" Margin="8,0" Foreground="{StaticResource IslandTextTertiaryBrush}"/>
-                        <TextBlock Style="{StaticResource IslandTextStyle}" FontSize="12" Text="{Binding TotalErros}" Foreground="{StaticResource IslandDangerBrush}"/>
-                        <TextBlock Style="{StaticResource IslandMutedTextStyle}" Text="erros" Margin="4,0,0,0"/>
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,4,0"
-                                Visibility="{Binding IsSyncing, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <ProgressBar Width="110" Height="6"
-                                     Minimum="0"
-                                     Maximum="{Binding TotalEmpresas}"
-                                     Value="{Binding EmpresasProcessadas, Mode=OneWay}"
-                                     Background="{StaticResource IslandBackgroundPressedBrush}"
-                                     Foreground="{StaticResource IslandAccentBrush}"/>
-                        <TextBlock Style="{StaticResource IslandMutedTextStyle}" Margin="10,0,0,0">
-                            <Run Text="{Binding EmpresasProcessadas, Mode=OneWay}" Foreground="White" FontWeight="SemiBold"/>
-                            <Run Text="/"/>
-                            <Run Text="{Binding TotalEmpresas, Mode=OneWay}"/>
-                        </TextBlock>
-                    </StackPanel>
-
-                    <Border Grid.Column="4" Style="{StaticResource IslandDividerStyle}"/>
-
-                    <StackPanel Grid.Column="5" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,4,0">
-                        <Button Content="&#xE72C;"
-                                Style="{StaticResource IslandIconButtonStyle}"
-                                Command="{Binding ResetNsuCommand}"
-                                ToolTip="Baixar desde o inicio (requer confirmacao em duas etapas)"/>
-                        <Button Content="&#xE71A;"
-                                Style="{StaticResource IslandIconButtonStyle}"
-                                Foreground="{StaticResource IslandDangerBrush}"
-                                Command="{Binding CancelSyncCommand}"
-                                Visibility="{Binding IsSyncing, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                ToolTip="Parar"/>
-                        <Button Content="&#xE896;"
-                                Style="{StaticResource IslandPrimaryIconButtonStyle}"
-                                Command="{Binding StartSyncCommand}"
-                                IsEnabled="{Binding CanStartSync}"
-                                ToolTip="{Binding CanStartSyncReason}"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
+            <controls:DynamicIslandControl x:Name="DynamicIsland" Grid.Column="1"/>
 
             <StackPanel Grid.Column="2"
                         Orientation="Horizontal"
@@ -244,12 +155,29 @@
                             </Grid.ColumnDefinitions>
                             
                             <!-- Barra de Busca Moderna com Icone -->
-                            <Grid Grid.Column="0" MaxWidth="450" HorizontalAlignment="Left">
+                            <Grid Grid.Column="0" MaxWidth="450" HorizontalAlignment="Stretch">
                                 <TextBlock Text="&#xE721;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Foreground="{StaticResource TextSecondaryBrush}" 
                                            HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12,0,0,0" Panel.ZIndex="1"/>
-                                <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" 
+                                <TextBox x:Name="CertificateSearchBox"
+                                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                                          Padding="36,10,12,10" Margin="0"
-                                         ToolTip="Buscar empresa, CNPJ ou arquivo..." />
+                                         ToolTip="Buscar empresa, CNPJ/CPF ou arquivo..." />
+                                <TextBlock Text="Buscar empresa, CNPJ/CPF ou arquivo"
+                                           Margin="36,0,12,0"
+                                           VerticalAlignment="Center"
+                                           Foreground="{StaticResource TextTertiaryBrush}"
+                                           IsHitTestVisible="False">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Text, ElementName=CertificateSearchBox}" Value="">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
                             </Grid>
 
                             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
@@ -288,7 +216,8 @@
                             </Border>
 
                             <!-- Empty State Aprimorado (Icone + Mensagem) -->
-                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" IsHitTestVisible="False">
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                                        Margin="0,44,0,0" Orientation="Horizontal" IsHitTestVisible="False">
                                 <StackPanel.Style>
                                     <Style TargetType="StackPanel">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -299,12 +228,13 @@
                                         </Style.Triggers>
                                     </Style>
                                 </StackPanel.Style>
-                                
-                                <Path Data="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z" 
-                                      Fill="{StaticResource CardBorderBrush}" Width="56" Height="56" Stretch="Uniform" Margin="0,0,0,16" HorizontalAlignment="Center"/>
-                                <TextBlock Text="{Binding EmptyStateMessage}" MaxWidth="400"
+                                <TextBlock Text="&#xE8B7;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                           FontSize="18" Foreground="{StaticResource TextTertiaryBrush}"
+                                           VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <TextBlock Text="{Binding EmptyStateMessage}" MaxWidth="520"
                                            HorizontalAlignment="Center" TextAlignment="Center"
-                                           TextWrapping="Wrap" FontSize="14" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                           TextWrapping="Wrap" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}"
+                                           VerticalAlignment="Center"/>
                             </StackPanel>
                         </Grid>
                     </Grid>

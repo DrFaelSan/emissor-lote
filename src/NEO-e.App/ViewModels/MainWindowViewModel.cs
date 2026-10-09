@@ -7,6 +7,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using NEO_e.App.Commands;
 using NEO_e.App.Converters;
+using NEO_e.App.Services;
 using NEO_e.Application.Contracts;
 using NEO_e.Application.UseCases;
 using NEO_e.Domain.Entities;
@@ -30,6 +31,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
     private readonly ICredentialManager _credentialManager;
     private readonly IAppSettingsProvider _settings;
     private readonly IEnvironmentContext _environment;
+    private readonly IIslandNotifier _islandNotifier;
     private CancellationTokenSource? _discoveryCancellation;
     private CancellationTokenSource? _syncCancellation;
     private CancellationTokenSource? _operationCancellation;
@@ -65,7 +67,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         IReceivedDocumentIndexer receivedDocumentIndexer,
         ICredentialManager credentialManager,
         IAppSettingsProvider settings,
-        IEnvironmentContext environment)
+        IEnvironmentContext environment,
+        IIslandNotifier islandNotifier)
     {
         _discoverCertificates = discoverCertificates;
         _loadCertificate = loadCertificate;
@@ -79,6 +82,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         _credentialManager = credentialManager;
         _settings = settings;
         _environment = environment;
+        _islandNotifier = islandNotifier;
         _certificateFolder = settings.Certificates.FolderPath;
         _destinationFolder = settings.Storage.DestinationPath;
         _selectedEnvironment = environment.Current.ToString();
@@ -564,6 +568,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
                 AddLog(
                     $"[TESTE] Lote local concluido: {_totalDocumentos} XML simulado(s), {_totalErros} erro(s).",
                     _totalErros == 0 ? LogLevel.Success : LogLevel.Error);
+                NotifyIsland(
+                    _totalErros == 0
+                        ? $"Simulacao concluida: {_totalDocumentos} XML simulado(s)."
+                        : $"Simulacao concluida com {_totalErros} erro(s).",
+                    _totalErros == 0 ? IslandNotificationKind.Success : IslandNotificationKind.Error);
                 return;
             }
 
@@ -609,11 +618,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
             {
                 StatusMessage = $"Sincronizacao concluida: {result.TotalDocumentos} documento(s), sem erros.";
                 AddLog($"Sincronizacao concluida: {result.Sucessos} sucesso(s), {result.TotalDocumentos} documento(s) processados.", LogLevel.Success);
+                NotifyIsland(StatusMessage, IslandNotificationKind.Success);
             }
             else
             {
                 StatusMessage = $"Sincronizacao concluida com {result.Falhas} falha(s) e {result.TotalErros} erro(s).";
                 AddLog($"Sincronizacao concluida com falhas: {result.Falhas} falha(s), {result.TotalErros} erro(s).", LogLevel.Error);
+                NotifyIsland(StatusMessage, IslandNotificationKind.Error);
             }
         }
         catch (OperationCanceledException)
@@ -625,6 +636,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         {
             StatusMessage = "Falha durante a operacao.";
             AddLog($"Erro durante sincronizacao: {ex.Message}", LogLevel.Error);
+            NotifyIsland(StatusMessage, IslandNotificationKind.Error);
         }
         finally
         {
@@ -1164,7 +1176,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IProgressRepor
         OnPropertyChanged(nameof(SelectedEnvironment));
         OnPropertyChanged(nameof(ActiveEnvironmentLabel));
         OnPropertyChanged(nameof(EnvironmentDescription));
+        NotifyIsland($"Ambiente alterado: {EnvironmentDescription}", IslandNotificationKind.Info);
     }
+
+    private void NotifyIsland(string message, IslandNotificationKind kind) =>
+        _islandNotifier.Notify(new IslandNotification(message, kind));
 
     public void ReportEmpresaStart(Cnpj cnpj, Nsu nsuInicial)
     {

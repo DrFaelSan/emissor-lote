@@ -3,6 +3,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using NEO_e.App.Services;
 using NEO_e.App.ViewModels;
 using NEO_e.Application.Contracts;
 using NEO_e.Application.UseCases;
@@ -13,21 +14,28 @@ using System.Windows;
 
 public partial class App : System.Windows.Application
 {
+    private const int MinimumSplashMilliseconds = 800;
+
     private IHost? _host;
+    private SplashScreenWindow? _splash;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
 
-        ShutdownMode = ShutdownMode.OnMainWindowClose;
+        ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
+        var bootTimer = System.Diagnostics.Stopwatch.StartNew();
+        _splash = new SplashScreenWindow();
+        _splash.Show();
+
         try
         {
-            _host = Host.CreateDefaultBuilder(e.Args)
+            _host = await Task.Run(() => Host.CreateDefaultBuilder(e.Args)
                 .UseDefaultServiceProvider(options =>
                 {
                     options.ValidateOnBuild = true;
@@ -55,9 +63,10 @@ public partial class App : System.Windows.Application
 
                     services.AddSingleton<MainWindowViewModel>();
                     services.AddSingleton<IProgressReporter>(sp => sp.GetRequiredService<MainWindowViewModel>());
+                    services.AddSingleton<IIslandNotifier, IslandNotificationService>();
                     services.AddSingleton<MainWindow>();
                 })
-                .Build();
+                .Build());
 
             var logger = _host.Services.GetRequiredService<NEO_e.Application.Contracts.ILogger>();
             logger.LogInformation("Sistema NEO-e iniciando... Ambiente base: {BaseDirectory}", AppContext.BaseDirectory);
@@ -65,17 +74,32 @@ public partial class App : System.Windows.Application
 
             await _host.StartAsync();
 
+            var remainingSplashTime = MinimumSplashMilliseconds - bootTimer.ElapsedMilliseconds;
+            if (remainingSplashTime > 0)
+            {
+                await Task.Delay((int)remainingSplashTime);
+            }
+
             var mainWindow = _host.Services.GetRequiredService<MainWindow>();
             MainWindow = mainWindow;
+            ShutdownMode = ShutdownMode.OnMainWindowClose;
             mainWindow.Show();
+            CloseSplash();
 
             logger.LogInformation("MainWindow exibida com sucesso.");
         }
         catch (Exception ex)
         {
+            CloseSplash();
             ShowStartupError(ex);
             Shutdown();
         }
+    }
+
+    private void CloseSplash()
+    {
+        _splash?.Close();
+        _splash = null;
     }
 
     protected override async void OnExit(ExitEventArgs e)

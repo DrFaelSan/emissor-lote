@@ -68,8 +68,15 @@ Logging/
 
 ### NEO-e.App (`src/NEO-e.App/`)
 ```
-App.xaml / App.xaml.cs        # Application entry, DI composition, Host builder
+App.xaml / App.xaml.cs        # Application entry, DI composition, Host builder, splash boot
+SplashScreenWindow.xaml / SplashScreenWindow.xaml.cs # Splash screen shown during host build
 MainWindow.xaml / MainWindow.xaml.cs # Main window (code-behind minimal)
+Controls/
+  └── DynamicIslandControl.xaml / DynamicIslandControl.xaml.cs # Status island with hover/notification transitions
+Services/
+  ├── IslandNotification.cs   # IslandNotificationKind + IslandNotification record
+  ├── IIslandNotifier.cs      # Notification event contract for the island
+  └── IslandNotificationService.cs # Singleton notifier raised by the ViewModel
 ViewModels/
   └── MainWindowViewModel.cs  # Main VM implementing IProgressReporter, INotifyPropertyChanged
 Commands/

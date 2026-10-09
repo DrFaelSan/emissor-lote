@@ -54,10 +54,13 @@
 ## WPF / MVVM
 - **ViewModel**: Implements `INotifyPropertyChanged` (manual `SetField` helper)
 - **View**: Code-behind only for `InitializeComponent` and simple event forwarding
+- **Controls**: Self-contained `UserControl` (e.g. `DynamicIslandControl`) owns its animation code-behind; animations are serialized to avoid racing storyboards
+- **Notifications**: ViewModel raises `IIslandNotifier.Notify(IslandNotification)`; never references island controls
 - **Commands**: `RelayCommand` (sync) / `AsyncRelayCommand` (async with execution guard)
 - **No UI Access**: ViewModel never touches visual controls directly
 - **Progress Reporting**: `IProgressReporter` interface implemented by ViewModel
 - **Thread Safety**: Long operations on background; UI updates via `PropertyChanged` on UI thread
+- **Boot**: Splash shown before host build with 800 ms minimum; `ShutdownMode` switches to `OnMainWindowClose` only after MainWindow is assigned
 
 ## Configuration
 - Strongly-typed `IOptions<>` pattern

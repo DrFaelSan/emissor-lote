@@ -26,8 +26,13 @@ Implementar Baixar XML, Baixar desde o inicio e Parar. Usar cancelamento coopera
 
 Exibir CNPJ/NSU atual, contadores e erros acionaveis. O log visual nao pode mostrar XML completo, senha, token ou chave privada.
 
+## UI-007 - Splash screen e Dynamic Island
+
+Exibir splash screen durante o boot com tempo minimo de exibicao e extrair o painel de status para a `DynamicIslandControl` com transicoes entre oculto, ponto de repouso e expandido. Notificar fim de sincronizacao, simulacao, falha e troca de ambiente via `IIslandNotifier`, sem o ViewModel acessar controles. Referencia: [RFC-004-UX-UI-Splash-Dynamic-Island.md](RFC-004-UX-UI-Splash-Dynamic-Island.md).
+
 ## Pronto quando
 
 - O fluxo principal pode ser executado sem acessar controles diretamente pelo ViewModel.
 - O usuario entende o estado de cada empresa.
 - Iniciar, cancelar e resetar possuem estados e confirmacoes corretos.
+- A splash cobre o boot sem encerrar a aplicacao e a ilha anima hover e notificacoes sem corrida de transicoes.
