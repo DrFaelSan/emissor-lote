@@ -248,3 +248,10 @@ public sealed record InventoryRecord(
     ValorMonetario Valor,
     string CaminhoArquivo,
     Nsu Nsu);
+
+public sealed record ProgressInfo(
+    string Message,
+    double? Percent = null,
+    int? CompletedItems = null,
+    int? TotalItems = null
+);

@@ -96,6 +96,18 @@ dotnet run --project src/NEO-e.App/NEO-e.App.csproj -c Debug
 2. Definir `NEO-e.App` como projeto de inicializacao.
 3. Pressionar F5 (Debug) ou Ctrl+F5 (executar sem debug).
 
+### WinUI 3
+
+O projeto `NEO-e.WinUI` fornece o shell WinUI 3 da aplicacao, reutilizando os mesmos casos de uso e a infraestrutura existentes. Para executa-lo:
+
+```powershell
+dotnet run --project src/NEO-e.WinUI/NEO-e.WinUI.csproj
+```
+
+No Visual Studio, defina `NEO-e.WinUI` como projeto de inicializacao. A tela WinUI inclui selecao e pesquisa de certificados, simulacao local, sincronizacao, progresso e logs, analise/recuperacao de lacunas, exportacao da execucao e indexacao de documentos recebidos. O shell tambem preserva o splash, a ilha dinamica e os seletores nativos de pasta/arquivo.
+
+O arquivo de configuracao desse shell e `src/NEO-e.WinUI/appsettings.json`; mantenha-o alinhado com `src/NEO-e.App/appsettings.json` ao alterar caminhos ou ambiente.
+
 ### Onde ficam os artefatos
 
 ```text
@@ -105,6 +117,8 @@ src/NEO-e.App/bin/Debug/net8.0-windows/
   logs/neo-e-.log          log estruturado (Serilog)
   *.dll, *.pdb             bibliotecas e simbolos
 ```
+
+Para o shell WinUI 3, os artefatos ficam em `src/NEO-e.WinUI/bin/Debug/net8.0-windows10.0.19041.0/`.
 
 ## 5. Executar em Release
 

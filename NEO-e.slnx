@@ -5,6 +5,7 @@
     <Project Path="src/NEO-e.Contracts/NEO-e.Contracts.csproj" />
     <Project Path="src/NEO-e.Domain/NEO-e.Domain.csproj" />
     <Project Path="src/NEO-e.Infrastructure/NEO-e.Infrastructure.csproj" />
+    <Project Path="src/NEO-e.WinUI/NEO-e.WinUI.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/NEO-e.HomologacaoTests/NEO-e.HomologacaoTests.csproj" />

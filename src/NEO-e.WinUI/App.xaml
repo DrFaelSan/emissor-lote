@@ -1,0 +1,211 @@
+<Application
+    x:Class="NEO_e.WinUI.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:NEO_e.WinUI.Converters">
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Paleta de Cores Base -->
+            <SolidColorBrush x:Key="BackgroundBrush" Color="#F1EFE7" />
+            <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="SurfaceMutedBrush" Color="#FAF9F4" />
+            <SolidColorBrush x:Key="PrimaryBrush" Color="#C9A227" />
+            <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#B8921F" />
+            <SolidColorBrush x:Key="CardBorderBrush" Color="#E6E2D6" />
+            <SolidColorBrush x:Key="ControlBorderBrush" Color="#D8D4C7" />
+            <SolidColorBrush x:Key="TextPrimaryBrush" Color="#2F2F2B" />
+            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#7A776D" />
+            <SolidColorBrush x:Key="TextOnPrimaryBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="DangerBrush" Color="#B23A2F" />
+            <SolidColorBrush x:Key="DangerMutedBrush" Color="#FBECEA" />
+            <SolidColorBrush x:Key="InfoMutedBrush" Color="#F6F1DE" />
+            <SolidColorBrush x:Key="LogInfoBrush" Color="#333333" />
+            <SolidColorBrush x:Key="LogWarningBrush" Color="#B8860B" />
+            <SolidColorBrush x:Key="LogErrorBrush" Color="#CC0000" />
+            <SolidColorBrush x:Key="LogSuccessBrush" Color="#2E7D32" />
+            <SolidColorBrush x:Key="TextTertiaryBrush" Color="#A5A196" />
+            <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#F5F3EC" />
+            <SolidColorBrush x:Key="DangerPressedBrush" Color="#933028" />
+
+            <SolidColorBrush x:Key="IslandBackgroundBrush" Color="#0A0A0A" />
+            <SolidColorBrush x:Key="IslandBackgroundElevatedBrush" Color="#1C1C1E" />
+            <SolidColorBrush x:Key="IslandBackgroundHoverBrush" Color="#2C2C2E" />
+            <SolidColorBrush x:Key="IslandBackgroundPressedBrush" Color="#3A3A3C" />
+            <SolidColorBrush x:Key="IslandDividerBrush" Color="#2F2F31" />
+            <SolidColorBrush x:Key="IslandTextPrimaryBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="IslandTextSecondaryBrush" Color="#8E8E93" />
+            <SolidColorBrush x:Key="IslandTextTertiaryBrush" Color="#5A5A5E" />
+            <SolidColorBrush x:Key="IslandAccentBrush" Color="#E8C547" />
+            <SolidColorBrush x:Key="IslandDangerBrush" Color="#FF453A" />
+
+            <!-- Estilos de Paineis e Cards -->
+            <Style x:Key="ShellStyle" TargetType="Border">
+                <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="16" />
+                <Setter Property="Padding" Value="24" />
+            </Style>
+
+            <Style x:Key="CardStyle" TargetType="Border">
+                <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="12" />
+                <Setter Property="Padding" Value="16" />
+            </Style>
+
+            <Style x:Key="StatBoxStyle" TargetType="Border">
+                <Setter Property="Background" Value="{StaticResource SurfaceMutedBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="10" />
+                <Setter Property="Padding" Value="16,12" />
+                <Setter Property="Margin" Value="0,0,12,0" />
+            </Style>
+
+            <Style x:Key="ChipStyle" TargetType="Border">
+                <Setter Property="Background" Value="{StaticResource SurfaceMutedBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="999" />
+                <Setter Property="Padding" Value="12,4" />
+                <Setter Property="Margin" Value="0,0,8,0" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+
+            <!-- Botoes com Microinteracoes (Animacoes) -->
+            <Style x:Key="AppButtonStyle" TargetType="Button">
+                <Setter Property="Padding" Value="16,10" />
+                <Setter Property="Margin" Value="0,0,8,0" />
+                <Setter Property="Background" Value="{StaticResource PrimaryBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource TextOnPrimaryBrush}" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="FontFamily" Value="Segoe UI Variable Display, Segoe UI, Arial" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+            </Style>
+
+            <Style TargetType="Button" BasedOn="{StaticResource AppButtonStyle}" />
+
+            <Style x:Key="PrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource AppButtonStyle}">
+                <Setter Property="Background" Value="{StaticResource PrimaryBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource TextOnPrimaryBrush}" />
+            </Style>
+
+            <Style x:Key="SecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource AppButtonStyle}">
+                <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource ControlBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </Style>
+
+            <Style x:Key="DangerButtonStyle" TargetType="Button" BasedOn="{StaticResource AppButtonStyle}">
+                <Setter Property="Background" Value="{StaticResource DangerBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource TextOnPrimaryBrush}" />
+            </Style>
+
+            <Style x:Key="IslandPillStyle" TargetType="Border">
+                <Setter Property="Background" Value="{StaticResource IslandBackgroundBrush}" />
+                <Setter Property="CornerRadius" Value="32" />
+                <Setter Property="Padding" Value="8,6" />
+            </Style>
+
+            <Style x:Key="IslandChipStyle" TargetType="Border">
+                <Setter Property="Background" Value="{StaticResource IslandBackgroundElevatedBrush}" />
+                <Setter Property="CornerRadius" Value="999" />
+                <Setter Property="Padding" Value="10,4" />
+                <Setter Property="Margin" Value="0,0,10,0" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+
+            <Style x:Key="IslandDividerStyle" TargetType="Border">
+                <Setter Property="Width" Value="1" />
+                <Setter Property="Background" Value="{StaticResource IslandDividerBrush}" />
+                <Setter Property="Margin" Value="10,10" />
+                <Setter Property="VerticalAlignment" Value="Stretch" />
+            </Style>
+
+            <Style x:Key="IslandIconButtonStyle" TargetType="Button">
+                <Setter Property="Width" Value="36" />
+                <Setter Property="Height" Value="36" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Foreground" Value="{StaticResource IslandTextSecondaryBrush}" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets" />
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="CornerRadius" Value="999" />
+                <Setter Property="Margin" Value="0" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+            </Style>
+
+            <Style x:Key="IslandPrimaryIconButtonStyle" TargetType="Button" BasedOn="{StaticResource IslandIconButtonStyle}">
+                <Setter Property="Background" Value="{StaticResource IslandAccentBrush}" />
+                <Setter Property="Foreground" Value="#0A0A0A" />
+                <Setter Property="Width" Value="40" />
+                <Setter Property="Height" Value="40" />
+                <Setter Property="FontSize" Value="14" />
+            </Style>
+
+            <Style x:Key="IslandTextStyle" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{StaticResource IslandTextPrimaryBrush}" />
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="FontFamily" Value="Segoe UI Variable Display, Segoe UI, Arial" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+
+            <Style x:Key="IslandMutedTextStyle" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{StaticResource IslandTextSecondaryBrush}" />
+                <Setter Property="FontSize" Value="11" />
+                <Setter Property="FontFamily" Value="Segoe UI Variable Display, Segoe UI, Arial" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+
+            <!-- Tipografia Global Moderna -->
+            <Style TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="Segoe UI Variable Display, Segoe UI, Arial" />
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            </Style>
+
+            <!-- Campos de Texto Modernos -->
+            <Style TargetType="TextBox">
+                <Setter Property="Padding" Value="12,8" />
+                <Setter Property="Margin" Value="0,0,8,0" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="BorderBrush" Value="{StaticResource ControlBorderBrush}" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="SelectionHighlightColor" Value="{StaticResource PrimaryBrush}" />
+                <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI, Arial" />
+                <Setter Property="FontSize" Value="13" />
+            </Style>
+
+            <!-- ProgressBar -->
+            <Style TargetType="ProgressBar">
+                <Setter Property="Background" Value="#EDEAE0" />
+                <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Height" Value="6" />
+                <Setter Property="CornerRadius" Value="3" />
+            </Style>
+
+            <local:LogLevelToBrushConverter x:Key="LogLevelToBrushConverter"/>
+            <local:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <local:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

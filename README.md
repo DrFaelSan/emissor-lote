@@ -13,7 +13,7 @@ A aplicacao deve ser Windows-first, local, auditavel e sem envio de certificados
 
 ## Estado atual
 
-O repositorio esta na fase de especificacao e planejamento tecnico. As RFCs e os backlogs estao sendo validados antes da criacao da solution .NET.
+O repositorio possui uma solution .NET 8 com camadas de dominio, aplicacao e infraestrutura, alem do shell WPF existente. O projeto `NEO-e.WinUI` migra a interface para WinUI 3, preservando os casos de uso e os servicos compartilhados; o guia de execucao documenta como iniciar cada shell.
 
 Documentos principais:
 
@@ -27,7 +27,7 @@ Documentos principais:
 ## Stack planejada
 
 - C# e .NET 8.
-- WPF com MVVM.
+- Shell legado WPF com MVVM e projeto de migração WinUI 3 em `src/NEO-e.WinUI`.
 - SQLite para estado, inventario e auditoria.
 - `HttpClient` com `SocketsHttpHandler` para mTLS.
 - `X509Certificate2` para certificados A1.
@@ -142,6 +142,8 @@ Os comandos definitivos de build, teste, formatacao e publicacao estao documenta
 ## Como instalar e executar
 
 O passo a passo completo de instalacao, execucao em Debug, execucao em Release, publicacao e distribuicao esta em [docs/INSTALAR-E-EXECUTAR.md](docs/INSTALAR-E-EXECUTAR.md).
+
+O shell WinUI 3 reutiliza os casos de uso e a infraestrutura existentes. Consulte o guia para executar `NEO-e.WinUI`.
 
 Publicacao rapida (self-contained, win-x64):
 
