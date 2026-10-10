@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 270" width="100%" height="100%">
+  <defs>
+    <style>
+      .txt-title {
+        font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
+        font-size: 108px;
+        font-weight: 900;
+        letter-spacing: -4px;
+      }
+      .txt-sub {
+        font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
+        font-size: 21px;
+        font-weight: 500;
+        fill: #5d6d7e;
+        letter-spacing: 0.8px;
+      }
+    </style>
+  </defs>
+
+  
+  <g transform="translate(70, 28)">
+
+    
+    <g transform="translate(155, 105) rotate(42)">
+      <path d="M -15,0 L -15,-46 L -30,-46 L 0,-90 L 30,-46 L 15,-46 L 15,0 Z" fill="#0082c8"></path>
+    </g>
+
+    
+    <path d="M 8,115 L -10,133" stroke="#004b7c" stroke-width="8" stroke-linecap="round"></path>
+    <path d="M 18,144 L 0,162" stroke="#004b7c" stroke-width="8" stroke-linecap="round"></path>
+    <path d="M 28,173 L 10,191" stroke="#004b7c" stroke-width="8" stroke-linecap="round"></path>
+
+    
+    <path d="M 18,148 L 88,202 L 158,148" fill="none" stroke="#004b7c" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"></path>
+
+    
+    <path d="M 28,129 L 88,174 L 148,129" fill="none" stroke="#f1c40f" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"></path>
+
+    
+    <path d="M 40,38 L 106,38 L 138,70 L 138,124 L 88,166 L 40,124 Z" fill="#ffffff" stroke="#0082c8" stroke-width="12" stroke-linejoin="round"></path>
+
+    
+    <path d="M 106,38 L 106,70 L 138,70" fill="#f4f6f7" stroke="#0082c8" stroke-width="12" stroke-linejoin="round" stroke-linecap="round"></path>
+
+    
+    <path d="M 64,94 L 83,114 L 118,64" fill="none" stroke="#27ae60" stroke-width="12.5" stroke-linecap="round" stroke-linejoin="round"></path>
+  </g>
+
+  
+  <g transform="translate(330, 142)">
+    
+    <text class="txt-title" x="0" y="0">
+      <tspan fill="#004b7c">NEO</tspan><tspan fill="#0082c8">-e</tspan>
+    </text>
+
+    
+    <text class="txt-sub" x="3" y="40">Automação Fiscal • Emissão em Lote</text>
+  </g>
+</svg>

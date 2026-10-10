@@ -97,6 +97,15 @@ public sealed class SplashScreenWindow : Microsoft.UI.Xaml.Window
     {
         var windowId = Win32Interop.GetWindowIdFromWindow(WindowNative.GetWindowHandle(this));
         var appWindow = AppWindow.GetFromWindowId(windowId);
+
+        if (appWindow.Presenter is OverlappedPresenter presenter)
+        {
+            presenter.SetBorderAndTitleBar(false, false);
+            presenter.IsResizable = false;
+            presenter.IsMinimizable = false;
+            presenter.IsMaximizable = false;
+        }
+
         appWindow.Resize(new SizeInt32 { Width = 420, Height = 260 });
 
         var workArea = DisplayArea.GetFromWindowId(windowId, DisplayAreaFallback.Nearest).WorkArea;

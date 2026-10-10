@@ -33,7 +33,7 @@
             IsHitTestVisible="False"
             Style="{StaticResource IslandPillStyle}">
         <Border.RenderTransform>
-            <TranslateTransform x:Name="IslandTransform" Y="-80" />
+            <TranslateTransform x:Name="IslandTransform" />
         </Border.RenderTransform>
 
         <Grid x:Name="IslandContent" Opacity="0" IsHitTestVisible="False">

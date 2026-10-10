@@ -14,7 +14,6 @@ namespace NEO_e.WinUI.Controls;
 public partial class DynamicIslandControl : UserControl
 {
     private const double MinimumIslandSize = 40;
-    private const double HiddenOffset = -80;
     private const double CollapsedCornerRadius = 20;
     private const double ExpandedCornerRadius = 32;
     private const int NotificationHoldMilliseconds = 5000;
@@ -127,8 +126,9 @@ public partial class DynamicIslandControl : UserControl
             return;
 
         _hasLoaded = true;
-        IslandRoot.IsHitTestVisible = false;
-        IslandTransform.Y = HiddenOffset;
+        IslandRoot.IsHitTestVisible = true;
+        IslandTransform.Y = 0;
+        _isIslandVisible = true;
     }
 
     private void OnIslandPointerEntered(object sender, PointerRoutedEventArgs e)
@@ -174,33 +174,13 @@ public partial class DynamicIslandControl : UserControl
             }
 
             if (_isExpanded == expand)
-            {
-                if (!expand)
-                    await SlideUpAsync();
                 return;
-            }
 
             if (expand)
                 await ExpandCoreAsync();
             else
-            {
                 await CollapseCoreAsync();
-                await SlideUpAsync();
-            }
         }
-    }
-
-    private Task SlideUpAsync()
-    {
-        if (!_isIslandVisible || _notificationHoldActive || _isPointerOver)
-            return Task.CompletedTask;
-
-        return AnimateTranslateAsync(HiddenOffset, SlideDuration, () =>
-        {
-            IslandTransform.Y = HiddenOffset;
-            _isIslandVisible = false;
-            IslandRoot.IsHitTestVisible = false;
-        });
     }
 
     private async Task ExpandCoreAsync()
