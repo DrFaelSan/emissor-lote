@@ -23,6 +23,7 @@ public sealed partial class MainWindow : Microsoft.UI.Xaml.Window
     {
         InitializeComponent();
 
+        SystemBackdrop = new MicaBackdrop();
         _viewModel = viewModel;
         RootGrid.DataContext = viewModel;
         DynamicIsland.Notifier = islandNotifier;

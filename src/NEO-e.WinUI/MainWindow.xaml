@@ -11,7 +11,7 @@
     <Grid
         x:Name="RootGrid"
         Loaded="OnLoaded"
-        Background="{StaticResource BackgroundBrush}">
+        Background="Transparent">
         <Grid.Resources>
             <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
                 <Setter Property="FontSize" Value="11" />

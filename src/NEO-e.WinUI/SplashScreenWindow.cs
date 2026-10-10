@@ -3,6 +3,7 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
 using Windows.UI;
 using Windows.Graphics;
 using WinRT.Interop;
@@ -27,7 +28,11 @@ public sealed class SplashScreenWindow : Microsoft.UI.Xaml.Window
         var layout = new Grid
         {
             Background = new SolidColorBrush(Color.FromArgb(255, 241, 239, 231)),
-            Padding = new Thickness(32)
+            Padding = new Thickness(32),
+            Transitions = new TransitionCollection
+            {
+                new EntranceThemeTransition { FromVerticalOffset = 12 }
+            }
         };
         layout.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
